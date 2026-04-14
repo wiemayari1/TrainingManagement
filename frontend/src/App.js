@@ -1,0 +1,88 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+import theme from './theme';
+import { useAuthStore } from './store/authStore';
+import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
+
+// Pages
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Formations from './pages/Formations';
+import Participants from './pages/Participants';
+import Formateurs from './pages/Formateurs';
+import Stats from './pages/Stats';
+import Admin from './pages/Admin';
+import AdminUsers from './pages/Admin/Users';
+import AdminStructures from './pages/Admin/Structures';
+import AdminDomaines from './pages/Admin/Domaines';
+import AdminProfils from './pages/Admin/Profils';
+import AdminEmployeurs from './pages/Admin/Employeurs';
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>
+        <AppRoutes />
+      </Router>
+    </ThemeProvider>
+  );
+}
+
+function AppRoutes() {
+  const { isAuthenticated, user } = useAuthStore();
+
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+
+      <Route element={<Layout />}>
+        {/* Dashboard — accessible à tous les rôles */}
+        <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Gestion opérationnelle — Simple utilisateur + Admin */}
+        <Route element={<ProtectedRoute allowedRoles={['ROLE_USER', 'ROLE_ADMIN']} />}>
+          <Route path="/formations" element={<Formations />} />
+          <Route path="/participants" element={<Participants />} />
+          <Route path="/formateurs" element={<Formateurs />} />
+        </Route>
+
+        {/* Statistiques — Responsable + Admin */}
+        <Route element={<ProtectedRoute allowedRoles={['ROLE_RESPONSABLE', 'ROLE_ADMIN']} />}>
+          <Route path="/stats" element={<Stats />} />
+        </Route>
+
+        {/* Administration — Admin uniquement */}
+        <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
+          <Route path="/admin" element={<Admin />}>
+            <Route index element={<Navigate to="/admin/users" replace />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="structures" element={<AdminStructures />} />
+            <Route path="domaines" element={<AdminDomaines />} />
+            <Route path="profils" element={<AdminProfils />} />
+            <Route path="employeurs" element={<AdminEmployeurs />} />
+          </Route>
+        </Route>
+
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
+export default App;
