@@ -5,6 +5,8 @@ import com.isi.gf.model.Role;
 import com.isi.gf.model.User;
 import com.isi.gf.repo.RoleRepo;
 import com.isi.gf.repo.UserRepo;
+import com.isi.gf.service.EmailService;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +23,7 @@ public class AdminController {
     @Autowired UserRepo userRepo;
     @Autowired RoleRepo roleRepo;
     @Autowired PasswordEncoder passwordEncoder;
+    @Autowired EmailService emailService; // ✅ AJOUT
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
@@ -37,7 +40,7 @@ public class AdminController {
     public ResponseEntity<?> createUser(@RequestBody CreateUserRequest req) {
         if (userRepo.existsByUsername(req.getUsername()))
             return ResponseEntity.badRequest().body(new MessageResponse("Username déjà utilisé", false));
-        if (req.getEmail() != null && userRepo.existsByEmail(req.getEmail()))
+        if (req.getEmail() != null && !req.getEmail().isBlank() && userRepo.existsByEmail(req.getEmail()))
             return ResponseEntity.badRequest().body(new MessageResponse("Email déjà utilisé", false));
 
         String roleName = req.getRole() != null ? req.getRole() : "ROLE_USER";
@@ -49,7 +52,18 @@ public class AdminController {
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole(role);
-        return ResponseEntity.ok(userRepo.save(user));
+        User saved = userRepo.save(user);
+
+        // ✅ Envoyer email de bienvenue si email fourni
+        if (req.getEmail() != null && !req.getEmail().isBlank()) {
+            try {
+                emailService.sendWelcomeEmail(req.getEmail(), req.getUsername(), roleName);
+            } catch (Exception e) {
+                System.err.println("Email de bienvenue non envoyé : " + e.getMessage());
+            }
+        }
+
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/users/{id}")
@@ -78,22 +92,13 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public List<Role> getAllRoles() { return roleRepo.findAll(); }
 
+    @Data
     public static class CreateUserRequest {
         private String username;
-        private String login; // alias pour compatibilité frontend
+        private String login;
         private String email;
         private String password;
         private String role;
-
         public String getUsername() { return username != null ? username : login; }
-        public void setUsername(String u) { this.username = u; }
-        public String getLogin() { return login; }
-        public void setLogin(String l) { this.login = l; }
-        public String getEmail() { return email; }
-        public void setEmail(String e) { this.email = e; }
-        public String getPassword() { return password; }
-        public void setPassword(String p) { this.password = p; }
-        public String getRole() { return role; }
-        public void setRole(String r) { this.role = r; }
     }
 }

@@ -8,8 +8,11 @@ import { useAuthStore } from './store/authStore';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
-// Pages
+// Pages publiques
 import Login from './pages/Login';
+import { ForgotPassword, ResetPassword } from './pages/ForgotPassword';
+
+// Pages protégées
 import Dashboard from './pages/Dashboard';
 import Formations from './pages/Formations';
 import Participants from './pages/Participants';
@@ -34,12 +37,14 @@ function App() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -48,12 +53,13 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/forgot-password" element={<Navigate to="/dashboard" replace />} />
 
       <Route element={<Layout />}>
-        {/* Dashboard — accessible à tous les rôles */}
+        {/* Dashboard — accessible à tous */}
         <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* Gestion opérationnelle — Simple utilisateur + Admin */}
+        {/* Gestion — Simple utilisateur + Admin */}
         <Route element={<ProtectedRoute allowedRoles={['ROLE_USER', 'ROLE_ADMIN']} />}>
           <Route path="/formations" element={<Formations />} />
           <Route path="/participants" element={<Participants />} />
