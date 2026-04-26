@@ -4,9 +4,12 @@ import com.isi.gf.config.JwtUtils;
 import com.isi.gf.dto.LoginRequest;
 import com.isi.gf.dto.JwtResponse;
 import com.isi.gf.dto.MessageResponse;
+import com.isi.gf.model.PasswordResetToken;
 import com.isi.gf.model.User;
+import com.isi.gf.repo.PasswordResetTokenRepo;
 import com.isi.gf.repo.UserRepo;
 import com.isi.gf.repo.RoleRepo;
+import com.isi.gf.service.EmailService;
 import com.isi.gf.service.UserDetailsImpl;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
@@ -32,18 +37,25 @@ public class AuthController {
     RoleRepo roleRepository;
 
     @Autowired
+    PasswordResetTokenRepo tokenRepository;
+
+    @Autowired
     PasswordEncoder encoder;
 
     @Autowired
     JwtUtils jwtUtils;
 
+    @Autowired
+    EmailService emailService;
+
+    // ── LOGIN ──────────────────────────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsername(),
-                        loginRequest.getPassword()
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
                     )
             );
 
@@ -51,73 +63,149 @@ public class AuthController {
             String jwt = jwtUtils.generateToken(authentication);
 
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
             String role = userDetails.getAuthorities().iterator().next().getAuthority();
 
-            // Récupérer l'utilisateur complet pour avoir firstLogin
-            User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-
             return ResponseEntity.ok(new JwtResponse(
-                jwt,
-                userDetails.getId(),
-                userDetails.getUsername(),
-                userDetails.getEmail(),
-                role,
-                user.getFirstLogin()
+                    jwt,
+                    userDetails.getId(),
+                    userDetails.getUsername(),
+                    userDetails.getEmail(),
+                    role,
+                    userDetails.getFirstLogin()
             ));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(
-                new MessageResponse("Identifiants incorrects", false)
+                    new MessageResponse("Identifiants incorrects", false)
             );
         }
     }
 
+    // ── REGISTER ───────────────────────────────────────────────────────────
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody User signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Erreur: Ce username est déjà utilisé!", false));
+                    .body(new MessageResponse("Erreur: Ce username est déjà utilisé!", false));
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Erreur: Cet email est déjà utilisé!", false));
+                    .body(new MessageResponse("Erreur: Cet email est déjà utilisé!", false));
         }
 
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
         user.setEmail(signUpRequest.getEmail());
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
-        user.setFirstLogin(true); // Nouveau utilisateur doit changer son mot de passe
+        user.setFirstLogin(true);
 
         roleRepository.findByNom("ROLE_USER").ifPresent(user::setRole);
-
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("Utilisateur enregistré avec succès!", true));
     }
 
-    /**
-     * Endpoint pour changer le mot de passe (première connexion ou changement volontaire)
-     */
+    // ── FORGOT PASSWORD ────────────────────────────────────────────────────
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Veuillez entrer votre email.", false));
+        }
+
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+
+        // Toujours retourner succès pour ne pas révéler si l'email existe
+        if (user == null) {
+            return ResponseEntity.ok(new MessageResponse(
+                    "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
+        }
+
+        // Supprimer l'ancien token s'il existe
+        tokenRepository.deleteByUserId(user.getId());
+
+        // Créer un nouveau token
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = new PasswordResetToken(token, user, 60); // 60 minutes
+        tokenRepository.save(resetToken);
+
+        // Envoyer l'email
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), token);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(
+                    new MessageResponse("Erreur lors de l'envoi de l'email. Réessayez plus tard.", false));
+        }
+
+        return ResponseEntity.ok(new MessageResponse(
+                "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
+    }
+
+    // ── VERIFY RESET TOKEN ─────────────────────────────────────────────────
+    @GetMapping("/reset-password/verify")
+    public ResponseEntity<?> verifyResetToken(@RequestParam String token) {
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Token manquant.", false));
+        }
+
+        PasswordResetToken resetToken = tokenRepository.findByToken(token).orElse(null);
+
+        if (resetToken == null || resetToken.isExpired() || resetToken.isUsed()) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Ce lien est invalide ou a expiré.", false));
+        }
+
+        return ResponseEntity.ok(new MessageResponse("Token valide.", true));
+    }
+
+    // ── RESET PASSWORD ─────────────────────────────────────────────────────
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        if (request.getToken() == null || request.getToken().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Token manquant.", false));
+        }
+
+        if (request.getPassword() == null || request.getPassword().length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Le mot de passe doit contenir au moins 6 caractères.", false));
+        }
+
+        PasswordResetToken resetToken = tokenRepository.findByToken(request.getToken()).orElse(null);
+
+        if (resetToken == null || resetToken.isExpired() || resetToken.isUsed()) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Ce lien est invalide ou a expiré.", false));
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(encoder.encode(request.getPassword()));
+        user.setFirstLogin(false);
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        tokenRepository.save(resetToken);
+
+        return ResponseEntity.ok(new MessageResponse(
+                "Mot de passe réinitialisé avec succès.", true));
+    }
+
+    // ── CHANGE PASSWORD ────────────────────────────────────────────────────
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
-        // Récupérer l'utilisateur authentifié depuis le token
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             return ResponseEntity.status(401).body(new MessageResponse("Non authentifié", false));
         }
 
         String username = auth.getName();
-        User user = userRepository.findByUsername(username)
-            .orElse(null);
+        User user = userRepository.findByUsername(username).orElse(null);
 
         if (user == null) {
             return ResponseEntity.badRequest().body(new MessageResponse("Utilisateur non trouvé", false));
         }
 
-        // Vérifier l'ancien mot de passe (sauf si firstLogin)
         if (!Boolean.TRUE.equals(user.getFirstLogin())) {
             if (request.getOldPassword() == null || request.getOldPassword().isBlank()) {
                 return ResponseEntity.badRequest().body(new MessageResponse("Ancien mot de passe requis", false));
@@ -127,30 +215,38 @@ public class AuthController {
             }
         }
 
-        // Validation du nouveau mot de passe
         if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
             return ResponseEntity.badRequest().body(
-                new MessageResponse("Le nouveau mot de passe doit contenir au moins 6 caractères", false)
-            );
+                    new MessageResponse("Le nouveau mot de passe doit contenir au moins 6 caractères", false));
         }
 
         if (request.getNewPassword().equals(request.getOldPassword()) && !Boolean.TRUE.equals(user.getFirstLogin())) {
             return ResponseEntity.badRequest().body(
-                new MessageResponse("Le nouveau mot de passe doit être différent de l'ancien", false)
-            );
+                    new MessageResponse("Le nouveau mot de passe doit être différent de l'ancien", false));
         }
 
-        // Mettre à jour le mot de passe
         user.setPassword(encoder.encode(request.getNewPassword()));
-        user.setFirstLogin(false); // Plus première connexion
+        user.setFirstLogin(false);
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("Mot de passe changé avec succès", true));
     }
 
+    // ── DTOs internes ──────────────────────────────────────────────────────
     @lombok.Data
     public static class ChangePasswordRequest {
         private String oldPassword;
         private String newPassword;
+    }
+
+    @lombok.Data
+    public static class ForgotPasswordRequest {
+        private String email;
+    }
+
+    @lombok.Data
+    public static class ResetPasswordRequest {
+        private String token;
+        private String password;
     }
 }

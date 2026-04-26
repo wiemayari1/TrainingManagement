@@ -2,47 +2,43 @@ package com.isi.gf.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.NoArgsArgsConstructor;
+import lombok.AllArgsConstructor;
+
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "password_reset_token")
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class PasswordResetToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true)
     private String token;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "idUser", nullable = false)
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(nullable = false, name = "user_id")
     private User user;
 
-    // FIX: La colonne MySQL s'appelle "expires_at" (snake_case)
-    // Hibernate par défaut mappe "expiresAt" → "expiresAt" (sans underscore)
-    // Il faut donc préciser le nom de colonne explicitement.
-    @Column(name = "expires_at", nullable = false)
-    private LocalDateTime expiresAt;
+    @Column(nullable = false)
+    private LocalDateTime expiryDate;
 
     @Column(nullable = false)
     private boolean used = false;
 
-    public PasswordResetToken(User user) {
-        this.token = UUID.randomUUID().toString();
+    public PasswordResetToken(String token, User user, int expirationMinutes) {
+        this.token = token;
         this.user = user;
-        this.expiresAt = LocalDateTime.now().plusHours(1); // expire dans 1h
+        this.expiryDate = LocalDateTime.now().plusMinutes(expirationMinutes);
+        this.used = false;
     }
 
     public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
-    }
-
-    public boolean isValid() {
-        return !used && !isExpired();
+        return LocalDateTime.now().isAfter(this.expiryDate);
     }
 }

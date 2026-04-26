@@ -19,7 +19,7 @@ import Formations from './pages/Formations';
 import Participants from './pages/Participants';
 import Formateurs from './pages/Formateurs';
 import Stats from './pages/Stats';
-import Profile from './pages/Profile';
+import Profile from './pages/Profile';   // ← page full-screen sans sidebar
 import Admin from './pages/Admin';
 import AdminUsers from './pages/Admin/Users';
 import AdminStructures from './pages/Admin/Structures';
@@ -44,10 +44,10 @@ function AppRoutes() {
     if (!isAuthenticated) {
         return (
             <Routes>
-                <Route path="/login" element={<Login />} />
+                <Route path="/login"          element={<Login />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
+                <Route path="/reset-password"  element={<ResetPassword />} />
+                <Route path="*"               element={<Navigate to="/login" replace />} />
             </Routes>
         );
     }
@@ -56,29 +56,30 @@ function AppRoutes() {
         return (
             <Routes>
                 <Route path="/first-login" element={<FirstLogin />} />
-                <Route path="*" element={<Navigate to="/first-login" replace />} />
+                <Route path="*"            element={<Navigate to="/first-login" replace />} />
             </Routes>
         );
     }
 
     return (
         <Routes>
-            <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+            {/* Redirections si déjà connecté */}
+            <Route path="/login"          element={<Navigate to="/dashboard" replace />} />
             <Route path="/forgot-password" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/first-login" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/first-login"    element={<Navigate to="/dashboard" replace />} />
 
+            {/* ── PROFIL : page full-screen SANS sidebar ── */}
+            <Route path="/profile" element={<Profile />} />
+
+            {/* ── Routes AVEC sidebar (Layout) ── */}
             <Route element={<Layout />}>
-                {/* Dashboard — accessible à tous */}
                 <Route path="/dashboard" element={<Dashboard />} />
-
-                {/* Profil — accessible à tous */}
-                <Route path="/profile" element={<Profile />} />
 
                 {/* Gestion — Simple utilisateur + Admin */}
                 <Route element={<ProtectedRoute allowedRoles={['ROLE_USER', 'ROLE_ADMIN']} />}>
-                    <Route path="/formations" element={<Formations />} />
+                    <Route path="/formations"  element={<Formations />} />
                     <Route path="/participants" element={<Participants />} />
-                    <Route path="/formateurs" element={<Formateurs />} />
+                    <Route path="/formateurs"  element={<Formateurs />} />
                 </Route>
 
                 {/* Statistiques — Responsable + Admin */}
@@ -90,10 +91,10 @@ function AppRoutes() {
                 <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
                     <Route path="/admin" element={<Admin />}>
                         <Route index element={<Navigate to="/admin/users" replace />} />
-                        <Route path="users" element={<AdminUsers />} />
+                        <Route path="users"      element={<AdminUsers />} />
                         <Route path="structures" element={<AdminStructures />} />
-                        <Route path="domaines" element={<AdminDomaines />} />
-                        <Route path="profils" element={<AdminProfils />} />
+                        <Route path="domaines"   element={<AdminDomaines />} />
+                        <Route path="profils"    element={<AdminProfils />} />
                         <Route path="employeurs" element={<AdminEmployeurs />} />
                     </Route>
                 </Route>

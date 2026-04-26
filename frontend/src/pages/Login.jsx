@@ -1,24 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 import {
     Box, TextField, Button, Typography, Paper, Alert,
-    InputAdornment, IconButton,
+    InputAdornment, IconButton, Divider, Avatar,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-
-// ── Mock auth store (remplace par ton vrai import) ─────────────
-const useAuthStore = () => ({
-    login: async (login, password) => {
-        await new Promise(r => setTimeout(r, 1000));
-        if (!login || !password) return { success: false, error: 'Champs requis.' };
-        return {
-            success: true,
-            user: {
-                firstLogin: false,
-                role: login === 'admin' ? 'ROLE_ADMIN' : login === 'responsable' ? 'ROLE_RESPONSABLE' : 'ROLE_USER'
-            }
-        };
-    }
-});
 
 // ── Icônes SVG inline ───────────────────────────────────────────
 const MailIcon = () => (
@@ -83,6 +70,7 @@ export default function Login() {
     const [showPwd, setShowPwd] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
     const { login } = useAuthStore();
 
     const handleSubmit = async (e) => {
@@ -96,9 +84,9 @@ export default function Login() {
         try {
             const result = await login(form.login, form.password);
             if (result.success) {
-                if (result.user?.firstLogin) window.location.href = '/first-login';
-                else if (result.user?.role === 'ROLE_RESPONSABLE') window.location.href = '/stats';
-                else window.location.href = '/dashboard';
+                if (result.user?.firstLogin) navigate('/first-login');
+                else if (result.user?.role === 'ROLE_RESPONSABLE') navigate('/stats');
+                else navigate('/dashboard');
             } else {
                 setError(result.error || 'Identifiants incorrects.');
             }
@@ -198,7 +186,7 @@ export default function Login() {
                     ))}
                 </Box>
 
-                {/* ── Woman illustration — CODE ORIGINAL EXACT ─────────── */}
+                {/* Woman illustration placeholder — circular image */}
                 <Box sx={{
                     position: 'absolute',
                     bottom: 0, right: 0,
@@ -363,12 +351,12 @@ export default function Login() {
 
                             {/* Forgot password */}
                             <Box sx={{ textAlign: 'right', mb: 3 }}>
-                                <a href="/forgot-password" style={{ textDecoration: 'none' }}>
+                                <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
                                     <Typography sx={{ fontSize: '0.8rem', color: '#6366F1', fontWeight: 600, cursor: 'pointer',
                                         '&:hover': { textDecoration: 'underline' } }}>
                                         Mot de passe oublié ?
                                     </Typography>
-                                </a>
+                                </Link>
                             </Box>
 
                             {/* Submit */}
@@ -390,7 +378,7 @@ export default function Login() {
                                     display: 'flex', gap: 1,
                                 }}
                             >
-                                {loading ? 'Connexion en cours...' : 'Se connecter'}
+                                {loading ? 'Connexion en cours...' : 'Se connecter →'}
                             </Button>
                         </form>
                     </Paper>
