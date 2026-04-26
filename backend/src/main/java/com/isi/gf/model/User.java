@@ -41,12 +41,20 @@ public class User {
     @JoinColumn(name = "idRole", nullable = false)
     private Role role;
 
+    /** 
+     * Indique si c'est la première connexion de l'utilisateur.
+     * Si true, l'utilisateur doit changer son mot de passe avant d'accéder à l'application.
+     */
+    @Column(nullable = false)
+    private Boolean firstLogin = true;
+
     public User(String username, String email, String password) {
         this.username = username;
         this.email = email;
         this.password = password;
+        this.firstLogin = true;
     }
-    
+
     public String getRole() {
         return role != null ? role.getNom() : null;
     }

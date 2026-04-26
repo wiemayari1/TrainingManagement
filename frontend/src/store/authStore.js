@@ -35,6 +35,7 @@ export const useAuthStore = create(
             email: data.email,
             // data.role contient "ROLE_ADMIN", "ROLE_RESPONSABLE" ou "ROLE_USER"
             role: data.role || 'ROLE_USER',
+            firstLogin: data.firstLogin,
             token,
           };
 
@@ -49,6 +50,13 @@ export const useAuthStore = create(
       logout: () => {
         localStorage.removeItem('token');
         set({ user: null, isAuthenticated: false, error: null });
+      },
+
+      // Marquer firstLogin comme traité (après changement de mot de passe)
+      clearFirstLogin: () => {
+        set(state => ({
+          user: state.user ? { ...state.user, firstLogin: false } : null,
+        }));
       },
 
       hasRole: (role) => {
@@ -88,6 +96,12 @@ export const useAuthStore = create(
       isAdmin: () => get().user?.role === 'ROLE_ADMIN',
       isResponsable: () => get().user?.role === 'ROLE_RESPONSABLE',
       isSimpleUser: () => get().user?.role === 'ROLE_USER',
+
+      // Vérifie si l'utilisateur doit changer son mot de passe
+      needsPasswordChange: () => {
+        const { user, isAuthenticated } = get();
+        return isAuthenticated && user?.firstLogin === true;
+      },
     }),
     {
       name: 'auth-storage',

@@ -12,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/structures")
-@CrossOrigin(origins = "http://localhost:3000")
 public class StructureController {
 
     @Autowired

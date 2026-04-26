@@ -1,6 +1,8 @@
 import axios from 'axios';
 
 // ── Instance Axios ────────────────────────────────────────────────────────────
+// Le backend a server.servlet.context-path=/api
+// Donc toutes les URLs commencent par /api
 const api = axios.create({
   baseURL: 'http://localhost:8081/api',
   headers: { 'Content-Type': 'application/json' },
@@ -94,39 +96,36 @@ export const inscriptionService = {
 
 export const statsService = {
   getDashboard:        (annee)    => api.get('/stats/dashboard', { params: { annee } }),
-  getParDomaine:       (annee)    => api.get('/stats/par-domaine', { params: { annee } }),
-  getParStructure:     (annee)    => api.get('/stats/par-structure', { params: { annee } }),
-  getEvolution:        (annee)    => api.get('/stats/evolution', { params: { annee } }),
-  getBudget:           (annee)    => api.get('/stats/budget', { params: { annee } }),
-  getFormateurs:       (annee)    => api.get('/stats/formateurs', { params: { annee } }),
+};
+
+export const authService = {
+  changePassword: (oldPassword, newPassword) => api.post('/auth/change-password', {
+    oldPassword,
+    newPassword,
+  }),
 };
 
 export const adminService = {
-  // Utilisateurs
   getUsers:      ()         => api.get('/admin/users'),
   createUser:    (data)     => api.post('/admin/users', data),
   updateUser:    (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser:    (id)       => api.delete(`/admin/users/${id}`),
 
-  // Domaines
   getDomaines:      ()         => api.get('/domaines'),
   createDomaine:    (data)     => api.post('/domaines', data),
   updateDomaine:    (id, data) => api.put(`/domaines/${id}`, data),
   deleteDomaine:    (id)       => api.delete(`/domaines/${id}`),
 
-  // Structures
   getStructures:    ()         => api.get('/structures'),
   createStructure:  (data)     => api.post('/structures', data),
   updateStructure:  (id, data) => api.put(`/structures/${id}`, data),
   deleteStructure:  (id)       => api.delete(`/structures/${id}`),
 
-  // Profils
   getProfils:       ()         => api.get('/profils'),
   createProfil:     (data)     => api.post('/profils', data),
   updateProfil:     (id, data) => api.put(`/profils/${id}`, data),
   deleteProfil:     (id)       => api.delete(`/profils/${id}`),
 
-  // Employeurs
   getEmployeurs:    ()         => api.get('/employeurs'),
   createEmployeur:  (data)     => api.post('/employeurs', data),
   updateEmployeur:  (id, data) => api.put(`/employeurs/${id}`, data),

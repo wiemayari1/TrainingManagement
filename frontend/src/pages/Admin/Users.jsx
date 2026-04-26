@@ -31,16 +31,25 @@ export default function AdminUsers() {
 
   const handleSubmit = async () => {
     if (!formData.username.trim()) return showSnack('Le login est obligatoire', 'error');
-    if (!editing && !formData.password.trim()) return showSnack('Le mot de passe est obligatoire', 'error');
+    
+    // Le mot de passe n'est plus obligatoire à la création - il sera généré auto
+    if (!editing && !formData.password.trim()) {
+      // On laisse passer - le backend génère un mot de passe auto
+    }
+    
     try {
-      // Adapter le champ pour le backend (attend "login" mais AdminController utilise "username")
-      const payload = { username: formData.username, email: formData.email, password: formData.password, role: formData.role };
+      const payload = { 
+        username: formData.username, 
+        email: formData.email, 
+        password: formData.password, 
+        role: formData.role 
+      };
       if (editing) {
         await adminService.updateUser(editing.id, payload);
         showSnack('Utilisateur mis à jour');
       } else {
         await adminService.createUser(payload);
-        showSnack('Utilisateur créé');
+        showSnack('Utilisateur créé avec succès');
       }
       setOpen(false);
       setEditing(null);
@@ -141,9 +150,16 @@ export default function AdminUsers() {
               onChange={(e) => setFormData({ ...formData, username: e.target.value })} fullWidth />
             <TextField label="Email" type="email" value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })} fullWidth />
-            <TextField label={editing ? 'Nouveau mot de passe (laisser vide pour ne pas changer)' : 'Mot de passe *'}
-              type="password" value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })} fullWidth />
+            
+            {/* MODIFICATION ICI : mot de passe optionnel à la création */}
+            <TextField 
+              label={editing ? 'Nouveau mot de passe (laisser vide pour ne pas changer)' : 'Mot de passe (laisser vide pour générer auto)'} 
+              type="password" 
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
+              fullWidth 
+            />
+            
             <FormControl fullWidth>
               <InputLabel>Rôle</InputLabel>
               <Select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} label="Rôle">

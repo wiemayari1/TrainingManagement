@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:3000", maxAge = 3600)
 public class AuthController {
 
     @Autowired
@@ -52,15 +51,20 @@ public class AuthController {
             String jwt = jwtUtils.generateToken(authentication);
 
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-            
+
             String role = userDetails.getAuthorities().iterator().next().getAuthority();
+
+            // Récupérer l'utilisateur complet pour avoir firstLogin
+            User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
             return ResponseEntity.ok(new JwtResponse(
                 jwt,
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
-                role
+                role,
+                user.getFirstLogin()
             ));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(
@@ -85,11 +89,68 @@ public class AuthController {
         user.setUsername(signUpRequest.getUsername());
         user.setEmail(signUpRequest.getEmail());
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
-        
+        user.setFirstLogin(true); // Nouveau utilisateur doit changer son mot de passe
+
         roleRepository.findByNom("ROLE_USER").ifPresent(user::setRole);
 
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("Utilisateur enregistré avec succès!", true));
+    }
+
+    /**
+     * Endpoint pour changer le mot de passe (première connexion ou changement volontaire)
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+        // Récupérer l'utilisateur authentifié depuis le token
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return ResponseEntity.status(401).body(new MessageResponse("Non authentifié", false));
+        }
+
+        String username = auth.getName();
+        User user = userRepository.findByUsername(username)
+            .orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Utilisateur non trouvé", false));
+        }
+
+        // Vérifier l'ancien mot de passe (sauf si firstLogin)
+        if (!Boolean.TRUE.equals(user.getFirstLogin())) {
+            if (request.getOldPassword() == null || request.getOldPassword().isBlank()) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Ancien mot de passe requis", false));
+            }
+            if (!encoder.matches(request.getOldPassword(), user.getPassword())) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Ancien mot de passe incorrect", false));
+            }
+        }
+
+        // Validation du nouveau mot de passe
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
+            return ResponseEntity.badRequest().body(
+                new MessageResponse("Le nouveau mot de passe doit contenir au moins 6 caractères", false)
+            );
+        }
+
+        if (request.getNewPassword().equals(request.getOldPassword()) && !Boolean.TRUE.equals(user.getFirstLogin())) {
+            return ResponseEntity.badRequest().body(
+                new MessageResponse("Le nouveau mot de passe doit être différent de l'ancien", false)
+            );
+        }
+
+        // Mettre à jour le mot de passe
+        user.setPassword(encoder.encode(request.getNewPassword()));
+        user.setFirstLogin(false); // Plus première connexion
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new MessageResponse("Mot de passe changé avec succès", true));
+    }
+
+    @lombok.Data
+    public static class ChangePasswordRequest {
+        private String oldPassword;
+        private String newPassword;
     }
 }

@@ -23,7 +23,10 @@ public class PasswordResetToken {
     @JoinColumn(name = "idUser", nullable = false)
     private User user;
 
-    @Column(nullable = false)
+    // FIX: La colonne MySQL s'appelle "expires_at" (snake_case)
+    // Hibernate par défaut mappe "expiresAt" → "expiresAt" (sans underscore)
+    // Il faut donc préciser le nom de colonne explicitement.
+    @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
     @Column(nullable = false)
@@ -38,7 +41,7 @@ public class PasswordResetToken {
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }
-    
+
     public boolean isValid() {
         return !used && !isExpired();
     }

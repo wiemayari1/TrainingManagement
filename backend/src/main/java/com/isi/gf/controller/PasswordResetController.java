@@ -5,7 +5,6 @@ import com.isi.gf.model.PasswordResetToken;
 import com.isi.gf.model.User;
 import com.isi.gf.repo.PasswordResetTokenRepo;
 import com.isi.gf.repo.UserRepo;
-import com.isi.gf.service.EmailService;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -14,32 +13,20 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:3000")
 public class PasswordResetController {
 
     @Autowired private UserRepo userRepo;
     @Autowired private PasswordResetTokenRepo tokenRepo;
-    @Autowired private EmailService emailService;
     @Autowired private PasswordEncoder passwordEncoder;
 
-    // ── Étape 1 : Demande de reset ────────────────────────────────────────────
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req) {
-        // On ne révèle pas si l'email existe ou non (sécurité)
         userRepo.findByEmail(req.getEmail()).ifPresent(user -> {
-            // Supprimer les anciens tokens
             tokenRepo.deleteByUserId(user.getId());
-
-            // Créer nouveau token
             PasswordResetToken token = new PasswordResetToken(user);
             tokenRepo.save(token);
-
-            // Envoyer email
-            try {
-                emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), token.getToken());
-            } catch (Exception e) {
-                System.err.println("Email non envoyé : " + e.getMessage());
-            }
+            // Email désactivé temporairement - log en console
+            System.out.println("🔑 Token reset pour " + user.getEmail() + ": " + token.getToken());
         });
 
         return ResponseEntity.ok(new MessageResponse(
@@ -47,7 +34,6 @@ public class PasswordResetController {
         ));
     }
 
-    // ── Étape 2 : Vérifier token ──────────────────────────────────────────────
     @GetMapping("/reset-password/verify")
     public ResponseEntity<?> verifyToken(@RequestParam String token) {
         return tokenRepo.findByToken(token)
@@ -58,7 +44,6 @@ public class PasswordResetController {
             ));
     }
 
-    // ── Étape 3 : Nouveau mot de passe ────────────────────────────────────────
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
         if (req.getPassword() == null || req.getPassword().length() < 6) {
@@ -80,14 +65,12 @@ public class PasswordResetController {
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         userRepo.save(user);
 
-        // Invalider le token
         tokenEntity.setUsed(true);
         tokenRepo.save(tokenEntity);
 
         return ResponseEntity.ok(new MessageResponse("Mot de passe réinitialisé avec succès", true));
     }
 
-    // ── DTOs ──────────────────────────────────────────────────────────────────
     @Data
     public static class ForgotPasswordRequest {
         private String email;

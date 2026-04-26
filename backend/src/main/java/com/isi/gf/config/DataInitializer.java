@@ -18,18 +18,28 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            // Pour chaque utilisateur en base, si le mot de passe n'est pas encore hashé → on le hashe
+            // Vérifier que les rôles existent d'abord
+            if (roleRepo.count() == 0) {
+                System.out.println("⚠️ Aucun rôle trouvé - Skip du hashage automatique");
+                return;
+            }
+
             userRepo.findAll().forEach(user -> {
                 String pwd = user.getPassword();
-                // Un hash BCrypt commence toujours par $2a$ ou $2b$
-                if (!pwd.startsWith("$2a$") && !pwd.startsWith("$2b$")) {
+                // Un hash BCrypt commence toujours par $2a$ ou $2b$ ou $2y$
+                if (pwd != null && !pwd.startsWith("$2")) {
                     user.setPassword(passwordEncoder.encode(pwd));
                     userRepo.save(user);
                     System.out.println("🔐 Mot de passe hashé pour : " + user.getUsername());
                 }
+                // S'assurer que firstLogin n'est pas null pour les users existants
+                if (user.getFirstLogin() == null) {
+                    user.setFirstLogin(false); // Users existants = déjà connectés
+                    userRepo.save(user);
+                }
             });
         } catch (Exception e) {
-            System.out.println("⚠️ Erreur DataInitializer : " + e.getMessage());
+            System.err.println("⚠️ Erreur DataInitializer (non bloquant) : " + e.getMessage());
         }
     }
 }

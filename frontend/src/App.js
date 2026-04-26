@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 
 // Pages publiques
 import Login from './pages/Login';
+import FirstLogin from './pages/FirstLogin';
 import { ForgotPassword, ResetPassword } from './pages/ForgotPassword';
 
 // Pages protégées
@@ -37,8 +38,9 @@ function App() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, needsPasswordChange } = useAuthStore();
 
+  // Si non authentifié : routes publiques uniquement
   if (!isAuthenticated) {
     return (
       <Routes>
@@ -50,10 +52,23 @@ function AppRoutes() {
     );
   }
 
+  // Si authentifié mais doit changer le mot de passe (première connexion)
+  if (needsPasswordChange()) {
+    return (
+      <Routes>
+        <Route path="/first-login" element={<FirstLogin />} />
+        {/* Toutes les autres routes redirigent vers first-login */}
+        <Route path="*" element={<Navigate to="/first-login" replace />} />
+      </Routes>
+    );
+  }
+
+  // Utilisateur authentifié et mot de passe changé
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/dashboard" replace />} />
       <Route path="/forgot-password" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/first-login" element={<Navigate to="/dashboard" replace />} />
 
       <Route element={<Layout />}>
         {/* Dashboard — accessible à tous */}

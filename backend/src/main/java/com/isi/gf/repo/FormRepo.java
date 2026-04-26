@@ -30,11 +30,11 @@ public interface FormRepo extends JpaRepository<Formation, Long> {
            "GROUP BY d.id, d.libelle")
     List<Object[]> statsByDomaine(@Param("annee") Integer annee);
     
-    @Query("SELECT MONTH(f.dateDebut), COUNT(f) " +
+    @Query("SELECT FUNCTION('MONTH', f.dateDebut), COUNT(f) " +
            "FROM Formation f " +
            "WHERE f.annee = :annee AND f.dateDebut IS NOT NULL " +
-           "GROUP BY MONTH(f.dateDebut) " +
-           "ORDER BY MONTH(f.dateDebut)")
+           "GROUP BY FUNCTION('MONTH', f.dateDebut) " +
+           "ORDER BY FUNCTION('MONTH', f.dateDebut)")
     List<Object[]> countByMonth(@Param("annee") Integer annee);
     
     @Query("SELECT f FROM Formation f WHERE f.annee = :annee AND f.statut = :statut")

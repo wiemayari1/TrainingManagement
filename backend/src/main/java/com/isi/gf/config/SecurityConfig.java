@@ -21,17 +21,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.Collections;
 
-/**
- * CORRECTION CRITIQUE:
- * server.servlet.context-path=/api → toutes les URLs sont préfixées par /api
- * Les controllers utilisent /formations, /participants, etc. (SANS /api)
- * Les URLs réelles deviennent /api/formations, /api/participants, etc.
- *
- * Dans SecurityConfig, les requestMatchers utilisent les paths SANS le context-path.
- * Spring Security opère avant le context-path dans la chaîne de filtres.
- *
- * CORRECTION ROLE: hasRole("RESPONSABLE") vérifie l'authority "ROLE_RESPONSABLE" ✅
- */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -68,17 +57,11 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Authentification publique (sans context-path dans le matcher)
-                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/auth/login", "/auth/register", "/auth/forgot-password", "/auth/reset-password/**").permitAll()
                 .requestMatchers("/public/**").permitAll()
-
-                // Administration — admin seulement
                 .requestMatchers("/admin/**").hasRole("ADMIN")
-
-                // Statistiques — responsable et admin
                 .requestMatchers("/stats/**").hasAnyRole("RESPONSABLE", "ADMIN")
-
-                // Tout le reste nécessite authentification (géré finement par @PreAuthorize)
+                // /auth/change-password nécessite d'être authentifié (token JWT)
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())

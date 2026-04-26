@@ -31,5 +31,8 @@ public interface InscriptionRepo extends JpaRepository<Inscription, Long> {
     @Query("SELECT COUNT(i) FROM Inscription i WHERE i.formation.annee = :annee")
     Long countTotalInscriptions(@Param("annee") Integer annee);
     
-    boolean existsByFormationIdAndParticipantId(Long formationId, Long participantId);
+    @Query("SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END FROM Inscription i " +
+           "WHERE i.formation.id = :formationId AND i.participant.id = :participantId")
+    boolean existsByFormationIdAndParticipantId(@Param("formationId") Long formationId, 
+                                                 @Param("participantId") Long participantId);
 }
