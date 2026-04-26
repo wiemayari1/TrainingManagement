@@ -1,114 +1,144 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, FormControl,
   InputLabel, Select, MenuItem, LinearProgress, Chip, Avatar,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  ToggleButton, ToggleButtonGroup, Tabs, Tab, Alert, IconButton,
-  Tooltip as MuiTooltip,
+  Tabs, Tab, Alert, Tooltip as MuiTooltip, ToggleButton, ToggleButtonGroup,
+  IconButton, Badge,
 } from '@mui/material';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area, LineChart, Line,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
-  ComposedChart, ReferenceLine,
+  ComposedChart, ReferenceLine, ScatterChart, Scatter, ZAxis,
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { statsService } from '../services/api';
 import {
   School, People, Person, AttachMoney, TrendingUp, TrendingDown,
-  EmojiEvents, CompareArrows, BarChart as BarIcon, ShowChart,
-  PieChart as PieIcon, CheckCircle, HourglassEmpty, Add, Remove,
-  CalendarToday, Assessment,
+  EmojiEvents, CheckCircle, Assessment, CalendarToday,
+  Star, StarBorder, WorkspacePremium, Insights, BarChart as BarIcon,
+  ShowChart, DonutLarge, Timeline, CompareArrows, AutoGraph,
 } from '@mui/icons-material';
 
-// ── Palette couleurs ──────────────────────────────────────────────────────────
-const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899'];
-const YEAR_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-const YEAR_COLORS_LIGHT = ['#EEF2FF', '#DCFCE7', '#FEF3C7', '#FEE2E2', '#F5F3FF'];
+// ── Palette ───────────────────────────────────────────────────────────────────
+const PALETTE = {
+  indigo:  { main: '#6366F1', light: '#EEF2FF', dark: '#4338CA', muted: '#A5B4FC' },
+  emerald: { main: '#10B981', light: '#ECFDF5', dark: '#047857', muted: '#6EE7B7' },
+  amber:   { main: '#F59E0B', light: '#FFFBEB', dark: '#B45309', muted: '#FCD34D' },
+  rose:    { main: '#F43F5E', light: '#FFF1F2', dark: '#BE123C', muted: '#FDA4AF' },
+  violet:  { main: '#8B5CF6', light: '#F5F3FF', dark: '#6D28D9', muted: '#C4B5FD' },
+  cyan:    { main: '#06B6D4', light: '#ECFEFF', dark: '#0E7490', muted: '#67E8F9' },
+  orange:  { main: '#EA580C', light: '#FFF7ED', dark: '#C2410C', muted: '#FDBA74' },
+};
 
-// ── Génération données démo sur 5 ans ────────────────────────────────────────
+const YEAR_PALETTE = [PALETTE.indigo, PALETTE.emerald, PALETTE.amber, PALETTE.rose, PALETTE.violet];
+
+// ── Génération données démo réalistes ─────────────────────────────────────────
 const generateDemoData = (year) => {
-  const base = year - 2020; // offset depuis 2020
-  const growth = 1 + base * 0.12; // ~12% growth par an
-  const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const base = year - 2020;
+  const growthRate = 1 + base * 0.13;
+  const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const seed = year * 31; // déterministe per year
+  const rng = (i) => ((seed * (i + 7) * 1103515245 + 12345) & 0x7fffffff) % 100;
+
+  const notesDomaines = [
+    { domaine: 'Informatique', note: Math.min(20, 14.2 + base * 0.25 + rng(1) * 0.02) },
+    { domaine: 'Management',   note: Math.min(20, 13.8 + base * 0.22 + rng(2) * 0.02) },
+    { domaine: 'Finance',      note: Math.min(20, 13.1 + base * 0.20 + rng(3) * 0.02) },
+    { domaine: 'Langues',      note: Math.min(20, 15.0 + base * 0.18 + rng(4) * 0.02) },
+    { domaine: 'Juridique',    note: Math.min(20, 13.5 + base * 0.23 + rng(5) * 0.02) },
+    { domaine: 'Marketing',    note: Math.min(20, 14.5 + base * 0.20 + rng(6) * 0.02) },
+  ].map(d => ({ ...d, pourcentage: Math.round(d.note / 20 * 100) }));
+
+  const noteGlobale = notesDomaines.reduce((s, d) => s + d.note, 0) / notesDomaines.length;
+
+  const formations = Math.round(12 * growthRate) + r(0, 3);
+  const participants = Math.round(148 * growthRate) + r(-8, 12);
+  const formateurs = Math.round(9 * growthRate) + r(0, 2);
+  const budget = Math.round(41000 * growthRate) + r(-1500, 2500);
+  const tauxPresence = Math.min(98, Math.round(79 + base * 2.8) + r(-2, 2));
 
   return {
-    totalFormations: Math.round(15 * growth) + rand(-1, 2),
-    totalParticipants: Math.round(187 * growth) + rand(-5, 10),
-    totalFormateurs: Math.round(11 * growth) + rand(0, 2),
-    budgetTotal: Math.round(52100 * growth) + rand(-2000, 3000),
-    tauxPresence: Math.min(99, Math.round(82 + base * 2.5) + rand(-2, 2)),
-    formateursInternes: Math.round(6 * growth),
-    formateursExternes: Math.round(5 * growth),
-    noteMoyenneGlobale: Math.min(19, Math.round((12.5 + base * 0.5) * 10) / 10),
+    totalFormations: formations,
+    totalParticipants: participants,
+    totalFormateurs: formateurs,
+    budgetTotal: budget,
+    tauxPresence,
+    formateursInternes: Math.round(formateurs * 0.55),
+    formateursExternes: Math.round(formateurs * 0.45),
+    noteMoyenneGlobale: Math.round(noteGlobale * 10) / 10,
+    notesMoyennesParDomaine: notesDomaines,
     formationsParDomaine: [
-      { name: 'Informatique', value: Math.round(5 * growth) + rand(0, 2), budget: Math.round(22000 * growth) },
-      { name: 'Management',   value: Math.round(3 * growth) + rand(0, 1), budget: Math.round(15000 * growth) },
-      { name: 'Finance',      value: Math.round(4 * growth) + rand(0, 1), budget: Math.round(12000 * growth) },
-      { name: 'Langues',      value: Math.round(2 * growth) + rand(0, 1), budget: Math.round(7000 * growth) },
-      { name: 'Juridique',    value: Math.round(1 * growth) + rand(0, 1), budget: Math.round(12200 * growth) },
+      { name: 'Informatique', value: Math.round(3.5 * growthRate) + r(0, 1), budget: Math.round(16000 * growthRate) },
+      { name: 'Management',   value: Math.round(2.5 * growthRate) + r(0, 1), budget: Math.round(11000 * growthRate) },
+      { name: 'Finance',      value: Math.round(2.8 * growthRate) + r(0, 1), budget: Math.round(9500 * growthRate) },
+      { name: 'Langues',      value: Math.round(1.8 * growthRate) + r(0, 1), budget: Math.round(6500 * growthRate) },
+      { name: 'Juridique',    value: Math.round(1.2 * growthRate) + r(0, 1), budget: Math.round(5000 * growthRate) },
+      { name: 'Marketing',    value: Math.round(1.5 * growthRate) + r(0, 1), budget: Math.round(7200 * growthRate) },
     ],
-    evolutionMensuelle: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'].map((mois, i) => ({
-      mois,
-      formations: Math.max(0, Math.floor(Math.sin(i / 2) * 2 + Math.round(2.5 * growth) + Math.random() * 1.5)),
-      participants: Math.max(0, Math.floor(Math.sin(i / 2) * 15 + Math.round(20 * growth) + Math.random() * 8)),
-      budget: Math.floor(Math.round(4200 * growth) + Math.random() * 2000),
-    })),
+    evolutionMensuelle: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'].map((mois, i) => {
+      const seasonal = Math.sin((i - 1) / 11 * Math.PI) * 0.6 + 0.7;
+      return {
+        mois,
+        formations: Math.max(0, Math.round(formations / 12 * seasonal * (0.8 + rng(i * 3) * 0.004))),
+        participants: Math.max(0, Math.round(participants / 12 * seasonal * (0.8 + rng(i * 5) * 0.004))),
+        budget: Math.max(0, Math.round(budget / 12 * seasonal * (0.85 + rng(i * 7) * 0.003))),
+      };
+    }),
     formationsParStatut: [
-      { name: 'Terminées',  value: Math.round(10 * growth), color: '#10B981' },
-      { name: 'En cours',   value: Math.round(1.5 * growth), color: '#F59E0B' },
-      { name: 'Planifiées', value: Math.round(3 * growth), color: '#6366F1' },
-      { name: 'Annulées',   value: Math.round(0.5 * growth) || 1, color: '#EF4444' },
+      { name: 'Terminées',  value: Math.round(formations * 0.58), color: PALETTE.emerald.main },
+      { name: 'En cours',   value: Math.round(formations * 0.12), color: PALETTE.amber.main },
+      { name: 'Planifiées', value: Math.round(formations * 0.22), color: PALETTE.indigo.main },
+      { name: 'Annulées',   value: Math.round(formations * 0.08), color: PALETTE.rose.main },
     ],
     topFormateurs: [
-      { nom: 'Ahmed Ben Ali', type: 'INTERNE', nbFormations: Math.round(5 * growth), satisfaction: 4.9, noteMoyenne: Math.min(19, 15.2 + base * 0.2) },
-      { nom: 'Karim Mrabet',  type: 'INTERNE', nbFormations: Math.round(4 * growth), satisfaction: 4.8, noteMoyenne: Math.min(19, 14.8 + base * 0.2) },
-      { nom: 'Sonia Hamdi',   type: 'EXTERNE', nbFormations: Math.round(3 * growth), satisfaction: 4.7, noteMoyenne: Math.min(19, 14.5 + base * 0.2) },
-      { nom: 'Rania Gharbi',  type: 'EXTERNE', nbFormations: Math.round(3 * growth), satisfaction: 4.6, noteMoyenne: Math.min(19, 14.1 + base * 0.2) },
+      { nom: 'Ahmed Ben Ali', prenom: 'Ahmed', type: 'INTERNE', nbFormations: Math.round(4.5 * growthRate), noteMoyenne: Math.min(19.5, 15.2 + base * 0.22), satisfaction: Math.min(5, 4.7 + base * 0.05) },
+      { nom: 'Karim Mrabet',  prenom: 'Karim', type: 'INTERNE', nbFormations: Math.round(3.8 * growthRate), noteMoyenne: Math.min(19.5, 14.8 + base * 0.20), satisfaction: Math.min(5, 4.6 + base * 0.04) },
+      { nom: 'Sonia Hamdi',   prenom: 'Sonia', type: 'EXTERNE', nbFormations: Math.round(3.2 * growthRate), noteMoyenne: Math.min(19.5, 14.5 + base * 0.18), satisfaction: Math.min(5, 4.5 + base * 0.04) },
+      { nom: 'Rania Gharbi',  prenom: 'Rania', type: 'EXTERNE', nbFormations: Math.round(2.8 * growthRate), noteMoyenne: Math.min(19.5, 14.1 + base * 0.17), satisfaction: Math.min(5, 4.4 + base * 0.03) },
+      { nom: 'Nour Chaabane', prenom: 'Nour',  type: 'INTERNE', nbFormations: Math.round(2.2 * growthRate), noteMoyenne: Math.min(19.5, 13.8 + base * 0.15), satisfaction: Math.min(5, 4.3 + base * 0.03) },
     ],
     participantsParStructure: [
-      { name: 'Dir. Centrale IT', participants: Math.round(95 * growth) },
-      { name: 'Dir. Financière',  participants: Math.round(62 * growth) },
-      { name: 'Dir. Nord',        participants: Math.round(48 * growth) },
-      { name: 'Dir. RH',          participants: Math.round(43 * growth) },
+      { name: 'Dir. IT',       participants: Math.round(72 * growthRate) },
+      { name: 'Dir. Financière', participants: Math.round(51 * growthRate) },
+      { name: 'Dir. Nord',     participants: Math.round(38 * growthRate) },
+      { name: 'Dir. RH',       participants: Math.round(34 * growthRate) },
+      { name: 'Dir. Sud',      participants: Math.round(28 * growthRate) },
     ],
     budgetParTrimestre: [
-      { trimestre: 'T1', budget: Math.round(17000 * growth), objectif: Math.round(52100 * growth * 0.27) },
-      { trimestre: 'T2', budget: Math.round(18500 * growth), objectif: Math.round(52100 * growth * 0.27) },
-      { trimestre: 'T3', budget: Math.round(16500 * growth), objectif: Math.round(52100 * growth * 0.25) },
-      { trimestre: 'T4', budget: Math.round(16200 * growth), objectif: Math.round(52100 * growth * 0.25) },
-    ],
-    notesMoyennesParDomaine: [
-      { domaine: 'Informatique', note: Math.min(20, 14.5 + base * 0.2 + Math.random() * 0.3), pourcentage: Math.min(100, Math.round((14.5 + base * 0.2) / 20 * 100)) },
-      { domaine: 'Management',   note: Math.min(20, 14.0 + base * 0.2 + Math.random() * 0.3), pourcentage: Math.min(100, Math.round((14.0 + base * 0.2) / 20 * 100)) },
-      { domaine: 'Finance',      note: Math.min(20, 13.2 + base * 0.2 + Math.random() * 0.3), pourcentage: Math.min(100, Math.round((13.2 + base * 0.2) / 20 * 100)) },
-      { domaine: 'Langues',      note: Math.min(20, 15.5 + base * 0.2 + Math.random() * 0.3), pourcentage: Math.min(100, Math.round((15.5 + base * 0.2) / 20 * 100)) },
-      { domaine: 'Juridique',    note: Math.min(20, 13.8 + base * 0.2 + Math.random() * 0.3), pourcentage: Math.min(100, Math.round((13.8 + base * 0.2) / 20 * 100)) },
+      { trimestre: 'T1', budget: Math.round(budget * 0.24), objectif: Math.round(budget * 0.25), formations: Math.round(formations * 0.26) },
+      { trimestre: 'T2', budget: Math.round(budget * 0.28), objectif: Math.round(budget * 0.25), formations: Math.round(formations * 0.29) },
+      { trimestre: 'T3', budget: Math.round(budget * 0.26), objectif: Math.round(budget * 0.25), formations: Math.round(formations * 0.25) },
+      { trimestre: 'T4', budget: Math.round(budget * 0.22), objectif: Math.round(budget * 0.25), formations: Math.round(formations * 0.20) },
     ],
   };
 };
 
-// ── Tooltip personnalisé ──────────────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label }) => {
+// ── Tooltip custom ─────────────────────────────────────────────────────────────
+const DarkTooltip = ({ active, payload, label, suffix = '' }) => {
   if (!active || !payload?.length) return null;
   return (
       <Box sx={{
-        bgcolor: '#1E293B', border: '1px solid #334155', borderRadius: 2,
-        p: 1.5, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', minWidth: 180,
+        bgcolor: '#0F172A', border: '1px solid #1E293B', borderRadius: 2,
+        p: 1.5, boxShadow: '0 20px 40px rgba(0,0,0,0.4)', minWidth: 160,
       }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', color: '#94A3B8', mb: 0.5 }}>{label}</Typography>
+        <Typography sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#64748B', mb: 0.8 }}>{label}</Typography>
         {payload.map((p, i) => (
             <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: p.color }} />
-                <Typography sx={{ fontSize: '0.78rem', color: '#94A3B8' }}>{p.name}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: p.color || p.fill }} />
+                <Typography sx={{ fontSize: '0.76rem', color: '#94A3B8' }}>{p.name}</Typography>
               </Box>
-              <Typography sx={{ fontSize: '0.8rem', color: '#fff', fontWeight: 700 }}>
-                {typeof p.value === 'number' && p.value > 1000
+              <Typography sx={{ fontSize: '0.8rem', color: '#F1F5F9', fontWeight: 700 }}>
+                {typeof p.value === 'number' && p.value > 999
                     ? `${p.value.toLocaleString()} DT`
                     : typeof p.value === 'number' && String(p.name).toLowerCase().includes('note')
-                        ? `${p.value.toFixed(1)}/20 (${Math.round(p.value / 20 * 100)}%)`
-                        : p.value}
+                        ? `${Number(p.value).toFixed(1)}/20`
+                        : typeof p.value === 'number' && String(p.name).toLowerCase().includes('%')
+                            ? `${p.value}%`
+                            : p.value}
+                {suffix}
               </Typography>
             </Box>
         ))}
@@ -116,172 +146,274 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-// ── Tooltip Notes avec pourcentage ───────────────────────────────────────────
-const NotesTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-      <Box sx={{
-        bgcolor: '#1E293B', border: '1px solid #334155', borderRadius: 2,
-        p: 1.5, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', minWidth: 200,
-      }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', color: '#94A3B8', mb: 0.5 }}>{label}</Typography>
-        {payload.map((p, i) => (
-            <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: p.color }} />
-                <Typography sx={{ fontSize: '0.78rem', color: '#94A3B8' }}>{p.name}</Typography>
-              </Box>
-              <Typography sx={{ fontSize: '0.8rem', color: '#fff', fontWeight: 700 }}>
-                {Number(p.value).toFixed(1)}/20
-                <Typography component="span" sx={{ fontSize: '0.72rem', color: '#10B981', ml: 0.5 }}>
-                  ({Math.round(p.value / 20 * 100)}%)
-                </Typography>
-              </Typography>
-            </Box>
-        ))}
-      </Box>
-  );
-};
-
-// ── Carte KPI ─────────────────────────────────────────────────────────────────
-function KpiCard({ icon, title, value, color, bg, sub, trend, delay = 0 }) {
+// ── KPI Card animée ────────────────────────────────────────────────────────────
+function KpiCard({ icon, title, value, color, bg, sub, trend, delay = 0, onClick }) {
   const Icon = icon;
-  const isPositive = trend && !trend.startsWith('-');
-  const trendNum = trend ? parseFloat(trend.replace('+', '')) : null;
+  const isUp = trend && !String(trend).startsWith('-');
   return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.4 }}>
-        <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ p: 1.2, borderRadius: 2.5, bgcolor: bg }}>
-                <Icon sx={{ color, fontSize: 22 }} />
+      <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={{ y: -5, transition: { duration: 0.18 } }}
+      >
+        <Card onClick={onClick} sx={{
+          border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%',
+          cursor: onClick ? 'pointer' : 'default',
+          transition: 'all 0.2s',
+          '&:hover': onClick ? { borderColor: color, boxShadow: `0 0 0 3px ${color}15` } : {},
+          position: 'relative', overflow: 'hidden',
+        }}>
+          <Box sx={{
+            position: 'absolute', top: 0, right: 0, width: 80, height: 80,
+            borderRadius: '0 0 0 100%',
+            bgcolor: `${color}08`,
+          }} />
+          <CardContent sx={{ p: 2.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <Box sx={{ p: 1.1, borderRadius: 2, bgcolor: bg }}>
+                <Icon sx={{ color, fontSize: 20 }} />
               </Box>
               {trend && (
                   <Chip
                       size="small"
-                      icon={isPositive
-                          ? <TrendingUp sx={{ fontSize: '11px !important' }} />
-                          : <TrendingDown sx={{ fontSize: '11px !important' }} />}
+                      icon={isUp ? <TrendingUp sx={{ fontSize: '11px !important' }} /> : <TrendingDown sx={{ fontSize: '11px !important' }} />}
                       label={trend}
                       sx={{
-                        bgcolor: isPositive ? '#DCFCE7' : '#FEE2E2',
-                        color: isPositive ? '#15803D' : '#DC2626',
-                        fontWeight: 700, fontSize: '0.67rem', height: 22,
+                        bgcolor: isUp ? '#DCFCE7' : '#FEE2E2',
+                        color: isUp ? '#15803D' : '#DC2626',
+                        fontWeight: 700, fontSize: '0.67rem', height: 20,
+                        '& .MuiChip-icon': { color: 'inherit' },
                       }}
                   />
               )}
             </Box>
-            <Typography sx={{ fontWeight: 800, fontSize: '1.9rem', color: '#0F172A', lineHeight: 1, mb: 0.5 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: '1.85rem', color: '#0F172A', lineHeight: 1, mb: 0.4 }}>
               {value}
             </Typography>
-            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#475569' }}>{title}</Typography>
-            {sub && <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8', mt: 0.5 }}>{sub}</Typography>}
+            <Typography sx={{ fontWeight: 600, fontSize: '0.82rem', color: '#475569' }}>{title}</Typography>
+            {sub && <Typography sx={{ fontSize: '0.7rem', color: '#94A3B8', mt: 0.4 }}>{sub}</Typography>}
           </CardContent>
         </Card>
       </motion.div>
   );
 }
 
-// ── Barre note avec pourcentage ───────────────────────────────────────────────
-function NoteBar({ domaine, note, pourcentage, color, index }) {
+// ── Barre note avec animation ──────────────────────────────────────────────────
+function NoteProgressBar({ domaine, note, pourcentage, color, index }) {
   return (
       <motion.div
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: index * 0.07 }}
+          transition={{ delay: index * 0.08, duration: 0.4 }}
       >
-        <Box sx={{ mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>{domaine}</Typography>
+        <Box sx={{ mb: 2.5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.8 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>
-                {note.toFixed(1)}<Typography component="span" sx={{ fontSize: '0.7rem', color: '#94A3B8' }}>/20</Typography>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: color }} />
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>{domaine}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: '#0F172A' }}>
+                {Number(note).toFixed(1)}<Typography component="span" sx={{ fontSize: '0.7rem', color: '#9CA3AF', fontWeight: 400 }}>/20</Typography>
               </Typography>
-              <Chip
-                  label={`${pourcentage}%`}
-                  size="small"
-                  sx={{
-                    height: 20, fontSize: '0.68rem', fontWeight: 700,
-                    bgcolor: pourcentage >= 80 ? '#DCFCE7' : pourcentage >= 65 ? '#FEF3C7' : '#FEE2E2',
-                    color: pourcentage >= 80 ? '#15803D' : pourcentage >= 65 ? '#92400E' : '#DC2626',
-                  }}
-              />
+              <Chip label={`${pourcentage}%`} size="small" sx={{
+                height: 20, fontSize: '0.68rem', fontWeight: 700,
+                bgcolor: pourcentage >= 80 ? '#DCFCE7' : pourcentage >= 65 ? '#FEF3C7' : '#FEE2E2',
+                color: pourcentage >= 80 ? '#14532D' : pourcentage >= 65 ? '#78350F' : '#7F1D1D',
+              }} />
             </Box>
           </Box>
-          <Box sx={{ position: 'relative', height: 8, borderRadius: 4, bgcolor: '#F1F5F9' }}>
+          <Box sx={{ position: 'relative', height: 10, borderRadius: 5, bgcolor: '#F1F5F9', overflow: 'hidden' }}>
             <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${pourcentage}%` }}
-                transition={{ delay: index * 0.07 + 0.3, duration: 0.6, ease: 'easeOut' }}
+                transition={{ delay: index * 0.08 + 0.3, duration: 0.7, ease: 'easeOut' }}
                 style={{
-                  position: 'absolute', height: '100%', borderRadius: 4,
+                  position: 'absolute', height: '100%', borderRadius: 5,
                   background: `linear-gradient(90deg, ${color}80, ${color})`,
                 }}
             />
-            {/* Ligne de référence à 70% (barre admissibilité) */}
             <Box sx={{
-              position: 'absolute', left: '70%', top: -4, bottom: -4,
-              width: 1.5, bgcolor: '#CBD5E1', borderRadius: 1,
+              position: 'absolute', left: '70%', top: '-3px', bottom: '-3px',
+              width: 2, bgcolor: '#CBD5E1', borderRadius: 1, zIndex: 1,
             }} />
           </Box>
-          <Typography sx={{ fontSize: '0.68rem', color: '#94A3B8', mt: 0.3 }}>
-            Admissibilité : 70%
+          <Typography sx={{ fontSize: '0.67rem', color: '#9CA3AF', mt: 0.4, textAlign: 'right' }}>
+            Seuil admissibilité : 70% (14/20)
           </Typography>
         </Box>
       </motion.div>
   );
 }
 
-// ── Construire données comparaison multi-années ───────────────────────────────
-function buildComparisonData(allStats, selectedYears) {
-  const months = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
-  return months.map((mois, i) => {
-    const row = { mois };
-    selectedYears.forEach(year => {
-      const d = allStats[year]?.evolutionMensuelle?.[i];
-      row[`formations_${year}`] = d?.formations || 0;
-      row[`participants_${year}`] = d?.participants || 0;
-      row[`budget_${year}`] = d?.budget || 0;
-    });
-    return row;
-  });
+// ── Jauge SVG circulaire ───────────────────────────────────────────────────────
+function CircularGauge({ value, max, label, color, size = 140 }) {
+  const pct = Math.min(100, Math.round(value / max * 100));
+  const r = 52;
+  const circ = 2 * Math.PI * r;
+  const dash = pct / 100 * circ;
+  return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ position: 'relative', width: size, height: size }}>
+          <svg viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)', width: size, height: size }}>
+            <circle cx="60" cy="60" r={r} fill="none" stroke="#F1F5F9" strokeWidth="10" />
+            <circle cx="60" cy="60" r={r} fill="none"
+                    stroke={color} strokeWidth="10"
+                    strokeDasharray={`${dash} ${circ}`}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dasharray 1s ease' }}
+            />
+            <circle cx="60" cy="60" r={r} fill="none"
+                    stroke="#CBD5E1" strokeWidth="2"
+                    strokeDasharray={`2 ${circ - 2}`}
+                    strokeDashoffset={-(70 / 100 * circ)}
+            />
+          </svg>
+          <Box sx={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)', textAlign: 'center',
+          }}>
+            <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', color, lineHeight: 1 }}>
+              {typeof value === 'number' && value < 30 ? Number(value).toFixed(1) : value}
+            </Typography>
+            <Typography sx={{ fontSize: '0.65rem', color: '#9CA3AF' }}>/{max}</Typography>
+          </Box>
+        </Box>
+        <Chip label={`${pct}%`} sx={{
+          fontWeight: 800, fontSize: '0.8rem', height: 26,
+          bgcolor: pct >= 80 ? '#DCFCE7' : pct >= 65 ? '#FEF3C7' : '#FEE2E2',
+          color: pct >= 80 ? '#14532D' : pct >= 65 ? '#78350F' : '#7F1D1D',
+        }} />
+        <Typography sx={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 500 }}>{label}</Typography>
+      </Box>
+  );
 }
 
-// ── Construire évolution annuelle (tous les ans en 1 ligne) ───────────────────
-function buildAnnualEvolution(allStats, allYears) {
-  return allYears.map(year => ({
-    year: String(year),
-    formations: (allStats[year] || generateDemoData(year)).totalFormations || 0,
-    participants: (allStats[year] || generateDemoData(year)).totalParticipants || 0,
-    budget: (allStats[year] || generateDemoData(year)).budgetTotal || 0,
-    taux: (allStats[year] || generateDemoData(year)).tauxPresence || 0,
-    note: (allStats[year] || generateDemoData(year)).noteMoyenneGlobale || 14,
-  }));
+// ── Tableau comparatif multi-années ───────────────────────────────────────────
+function ComparisonTable({ allStats, years, primaryYear }) {
+  const indicators = [
+    { label: 'Formations',       key: 'totalFormations',    fmt: v => String(v), unit: 'sessions' },
+    { label: 'Participants',     key: 'totalParticipants',  fmt: v => String(v), unit: 'inscrits' },
+    { label: 'Formateurs',       key: 'totalFormateurs',    fmt: v => String(v), unit: 'actifs' },
+    { label: 'Budget total',     key: 'budgetTotal',        fmt: v => `${(v||0).toLocaleString()} DT`, unit: '' },
+    { label: 'Taux présence',    key: 'tauxPresence',       fmt: v => `${v}%`, unit: '' },
+    { label: 'Note moy. /20',    key: 'noteMoyenneGlobale', fmt: v => v ? `${Number(v).toFixed(1)}/20` : '—', unit: '' },
+  ];
+  const sortedYears = [...years].sort((a, b) => a - b);
+
+  return (
+      <TableContainer>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+              <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.78rem', py: 1.5, minWidth: 130 }}>
+                Indicateur
+              </TableCell>
+              {sortedYears.map((year, idx) => (
+                  <TableCell key={year} align="center" sx={{
+                    fontWeight: 700, fontSize: '0.82rem', py: 1.5,
+                    color: year === primaryYear ? PALETTE.indigo.main : '#64748B',
+                    bgcolor: year === primaryYear ? `${PALETTE.indigo.main}08` : 'transparent',
+                    borderBottom: year === primaryYear ? `2px solid ${PALETTE.indigo.main}` : undefined,
+                  }}>
+                    {year}
+                    {year === primaryYear && (
+                        <Chip label="actuel" size="small" sx={{ ml: 0.5, height: 14, fontSize: '0.58rem', bgcolor: PALETTE.indigo.main, color: '#fff' }} />
+                    )}
+                  </TableCell>
+              ))}
+              <TableCell align="center" sx={{ fontWeight: 700, color: '#475569', fontSize: '0.72rem', py: 1.5, minWidth: 90 }}>
+                Évolution totale
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {indicators.map((ind, i) => {
+              const vals = sortedYears.map(y => {
+                const d = allStats[y] || generateDemoData(y);
+                return Number(d[ind.key]) || 0;
+              });
+              const first = vals[0], last = vals[vals.length - 1];
+              const evolPct = first > 0 ? Math.round((last - first) / first * 100) : null;
+              return (
+                  <TableRow key={i} sx={{ '&:hover': { bgcolor: '#FAFBFF' } }}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#0F172A' }}>{ind.label}</TableCell>
+                    {sortedYears.map((year, vi) => {
+                      const d = allStats[year] || generateDemoData(year);
+                      const raw = Number(d[ind.key]) || 0;
+                      const prevVal = vi > 0 ? Number((allStats[sortedYears[vi-1]] || generateDemoData(sortedYears[vi-1]))[ind.key]) || 0 : null;
+                      const delta = prevVal !== null && prevVal > 0 ? Math.round((raw - prevVal) / prevVal * 100) : null;
+                      return (
+                          <TableCell key={year} align="center" sx={{
+                            fontSize: '0.855rem',
+                            fontWeight: year === primaryYear ? 800 : 600,
+                            color: year === primaryYear ? PALETTE.indigo.main : '#0F172A',
+                            bgcolor: year === primaryYear ? `${PALETTE.indigo.main}05` : 'transparent',
+                          }}>
+                            <Box>
+                              {ind.fmt(raw)}
+                              {delta !== null && vi > 0 && (
+                                  <Typography component="span" sx={{
+                                    ml: 0.5, fontSize: '0.65rem', fontWeight: 700,
+                                    color: delta >= 0 ? '#15803D' : '#DC2626',
+                                  }}>
+                                    {delta >= 0 ? '▲' : '▼'}{Math.abs(delta)}%
+                                  </Typography>
+                              )}
+                            </Box>
+                          </TableCell>
+                      );
+                    })}
+                    <TableCell align="center">
+                      {evolPct !== null && (
+                          <Chip
+                              label={`${evolPct >= 0 ? '+' : ''}${evolPct}%`}
+                              size="small"
+                              icon={evolPct >= 0 ? <TrendingUp sx={{ fontSize: '11px !important' }} /> : <TrendingDown sx={{ fontSize: '11px !important' }} />}
+                              sx={{
+                                bgcolor: evolPct >= 0 ? '#DCFCE7' : '#FEE2E2',
+                                color: evolPct >= 0 ? '#15803D' : '#DC2626',
+                                fontWeight: 700, fontSize: '0.72rem', height: 22,
+                                '& .MuiChip-icon': { color: 'inherit' },
+                              }}
+                          />
+                      )}
+                    </TableCell>
+                  </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+  );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPOSANT PRINCIPAL
+// ══════════════════════════════════════════════════════════════════════════════
 export default function Stats() {
   const currentYear = new Date().getFullYear();
-  // 5 dernières années
   const availableYears = [currentYear, currentYear-1, currentYear-2, currentYear-3, currentYear-4];
 
   const [primaryYear, setPrimaryYear] = useState(currentYear);
-  const [compareYears, setCompareYears] = useState([]);
+  const [compareYears, setCompareYears] = useState([currentYear - 1]);
   const [allStats, setAllStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
-  const [chartMode, setChartMode] = useState('formations');
-  const [error, setError] = useState(null);
+  const [chartMetric, setChartMetric] = useState('formations');
 
-  const loadYearStats = useCallback(async (year) => {
+  // Charger les stats pour une année
+  const loadYear = useCallback(async (year) => {
     if (allStats[year]) return;
     try {
       const res = await statsService.getDashboard(year);
-      // Enrichir avec noteMoyenneGlobale si absent
       const data = res.data;
-      if (!data.noteMoyenneGlobale && data.notesMoyennesParDomaine) {
-        const notes = data.notesMoyennesParDomaine.map(d => d.note).filter(Boolean);
-        data.noteMoyenneGlobale = notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : 14;
+      if (!data.noteMoyenneGlobale) {
+        const notes = (data.notesMoyennesParDomaine || []).map(d => d.note).filter(Boolean);
+        data.noteMoyenneGlobale = notes.length
+            ? Math.round(notes.reduce((a, b) => a + b, 0) / notes.length * 10) / 10
+            : generateDemoData(year).noteMoyenneGlobale;
       }
       setAllStats(prev => ({ ...prev, [year]: data }));
     } catch {
@@ -290,828 +422,894 @@ export default function Stats() {
   }, [allStats]);
 
   useEffect(() => {
-    const load = async () => {
+    const init = async () => {
       setLoading(true);
-      await Promise.all(availableYears.map(y => loadYearStats(y)));
+      await Promise.all(availableYears.map(y => loadYear(y)));
       setLoading(false);
     };
-    load();
+    init();
   }, []);
 
-  const stats = allStats[primaryYear] || generateDemoData(primaryYear);
-  const activeYears = [primaryYear, ...compareYears].filter((v, i, a) => a.indexOf(v) === i);
-  const comparisonData = buildComparisonData(allStats, activeYears);
-  const annualEvolution = buildAnnualEvolution(allStats, [...availableYears].reverse());
-
-  const toggleCompareYear = (year) => {
+  const toggleCompare = (year) => {
     if (year === primaryYear) return;
     setCompareYears(prev =>
-        prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year].slice(0, 4)
+        prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year].slice(0, 3)
     );
   };
 
-  // Tendances vs année précédente
+  // Données de l'année principale
+  const stats = allStats[primaryYear] || generateDemoData(primaryYear);
   const prevStats = allStats[primaryYear - 1] || generateDemoData(primaryYear - 1);
+
   const calcTrend = (cur, prev) => {
     if (!prev || prev === 0) return null;
     const pct = Math.round((cur - prev) / prev * 100);
     return `${pct >= 0 ? '+' : ''}${pct}%`;
   };
-  const trendFormations = calcTrend(stats.totalFormations, prevStats?.totalFormations);
-  const trendParticipants = calcTrend(stats.totalParticipants, prevStats?.totalParticipants);
-  const trendBudget = calcTrend(stats.budgetTotal, prevStats?.budgetTotal);
-  const trendPresence = calcTrend(stats.tauxPresence, prevStats?.tauxPresence);
 
-  // Note moyenne globale
-  const noteGlobale = stats.noteMoyenneGlobale ||
-      (stats.notesMoyennesParDomaine?.length
-          ? stats.notesMoyennesParDomaine.reduce((s, d) => s + (d.note || 0), 0) / stats.notesMoyennesParDomaine.length
-          : 14);
+  const activeYears = [primaryYear, ...compareYears].filter((v, i, a) => a.indexOf(v) === i).sort();
+
+  // Données courbes mensuelles multi-années
+  const monthlyComparison = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'].map((mois, i) => {
+    const row = { mois };
+    activeYears.forEach(year => {
+      const d = allStats[year] || generateDemoData(year);
+      const m = (d.evolutionMensuelle || [])[i] || {};
+      row[`val_${year}`] = m[chartMetric] || 0;
+    });
+    return row;
+  });
+
+  // Évolution annuelle pour courbe sur 5 ans
+  const annualTrend = [...availableYears].reverse().map(year => {
+    const d = allStats[year] || generateDemoData(year);
+    return {
+      year: String(year),
+      formations: d.totalFormations || 0,
+      participants: d.totalParticipants || 0,
+      budget: d.budgetTotal || 0,
+      tauxPresence: d.tauxPresence || 0,
+      noteMoyenne: d.noteMoyenneGlobale || 0,
+    };
+  });
+
+  // Notes multi-années par domaine
+  const notesComparisonData = (stats.notesMoyennesParDomaine || []).map(d => {
+    const row = { domaine: d.domaine.substring(0, 8) };
+    activeYears.forEach(year => {
+      const yd = allStats[year] || generateDemoData(year);
+      const found = (yd.notesMoyennesParDomaine || []).find(x => x.domaine === d.domaine);
+      row[`note_${year}`] = found ? Math.round(found.note * 10) / 10 : 0;
+      row[`pct_${year}`] = found ? Math.round(found.note / 20 * 100) : 0;
+    });
+    return row;
+  });
+
+  const noteGlobale = stats.noteMoyenneGlobale || 14;
   const notePct = Math.round(noteGlobale / 20 * 100);
+
+  const DOMAIN_COLORS = Object.values(PALETTE).map(p => p.main);
+
+  const tabs = [
+    { label: 'Évolution mensuelle', icon: ShowChart },
+    { label: 'Comparaison multi-années', icon: CompareArrows },
+    { label: 'Répartition', icon: DonutLarge },
+    { label: 'Notes & Résultats', icon: Assessment },
+    { label: 'Performance', icon: EmojiEvents },
+    { label: 'Budget', icon: AttachMoney },
+  ];
 
   return (
       <Box sx={{ p: { xs: 2, md: 3 }, bgcolor: '#F8FAFC', minHeight: '100vh' }}>
 
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-              <Assessment sx={{ color: '#6366F1', fontSize: 28 }} />
-              <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', color: '#0F172A', letterSpacing: '-0.02em' }}>
-                Statistiques & Rapports
-              </Typography>
-            </Box>
-            <Typography sx={{ color: '#64748B', fontSize: '0.875rem', ml: 5 }}>
-              Suivi multi-annuel · {availableYears[availableYears.length - 1]} – {availableYears[0]}
-            </Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Sélecteur année principale */}
-            <FormControl size="small" sx={{ minWidth: 110 }}>
-              <InputLabel>Année</InputLabel>
-              <Select
-                  value={primaryYear}
-                  onChange={(e) => { setPrimaryYear(e.target.value); setCompareYears([]); }}
-                  label="Année"
-              >
-                {availableYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
-              </Select>
-            </FormControl>
-
-            {/* Boutons comparaison — jusqu'à 4 années en plus */}
-            <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600 }}>vs:</Typography>
-              {availableYears.filter(y => y !== primaryYear).map(y => {
-                const idx = availableYears.indexOf(y);
-                const active = compareYears.includes(y);
-                return (
-                    <Chip
-                        key={y}
-                        label={y}
-                        size="small"
-                        onClick={() => toggleCompareYear(y)}
-                        sx={{
-                          cursor: 'pointer',
-                          bgcolor: active ? YEAR_COLORS[compareYears.indexOf(y) + 1] + '20' : '#F1F5F9',
-                          color: active ? YEAR_COLORS[compareYears.indexOf(y) + 1] : '#64748B',
-                          border: `1px solid ${active ? YEAR_COLORS[compareYears.indexOf(y) + 1] : 'transparent'}`,
-                          fontWeight: 700, fontSize: '0.78rem', height: 26,
+        {/* ── HEADER ─────────────────────────────────────────────────────── */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <Box sx={{
+            mb: 3, p: 3, borderRadius: 3,
+            background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 40%, #4C1D95 100%)',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <Box sx={{
+              position: 'absolute', top: -40, right: -40, width: 200, height: 200,
+              borderRadius: '50%', bgcolor: 'rgba(99,102,241,0.15)',
+            }} />
+            <Box sx={{
+              position: 'absolute', bottom: -20, left: '30%', width: 120, height: 120,
+              borderRadius: '50%', bgcolor: 'rgba(139,92,246,0.1)',
+            }} />
+            <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+                  <AutoGraph sx={{ color: '#A5B4FC', fontSize: 28 }} />
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.6rem', color: '#fff', letterSpacing: '-0.02em' }}>
+                    Statistiques & Analyses
+                  </Typography>
+                </Box>
+                <Typography sx={{ color: '#A5B4FC', fontSize: '0.875rem' }}>
+                  Tableau de bord analytique multi-annuel · {availableYears[availableYears.length-1]}–{availableYears[0]}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                <FormControl size="small" sx={{ minWidth: 110 }}>
+                  <Select
+                      value={primaryYear}
+                      onChange={(e) => { setPrimaryYear(e.target.value); setCompareYears([]); }}
+                      sx={{
+                        bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', borderRadius: 2,
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
+                        '& .MuiSvgIcon-root': { color: '#fff' },
+                        fontSize: '0.875rem', fontWeight: 700,
+                      }}
+                  >
+                    {availableYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+                  </Select>
+                </FormControl>
+                <Box sx={{ display: 'flex', gap: 0.7, alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 600 }}>vs :</Typography>
+                  {availableYears.filter(y => y !== primaryYear).map((y, idx) => {
+                    const active = compareYears.includes(y);
+                    const palette = YEAR_PALETTE[compareYears.indexOf(y) + 1] || YEAR_PALETTE[idx + 1];
+                    return (
+                        <Chip key={y} label={y} size="small" onClick={() => toggleCompare(y)} sx={{
+                          cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', height: 26,
+                          bgcolor: active ? `${palette?.main}30` : 'rgba(255,255,255,0.08)',
+                          color: active ? palette?.muted : 'rgba(255,255,255,0.5)',
+                          border: `1px solid ${active ? palette?.main + '60' : 'transparent'}`,
                           transition: 'all 0.2s',
-                          '&:hover': { opacity: 0.85, transform: 'scale(1.03)' },
-                        }}
-                    />
-                );
-              })}
+                        }} />
+                    );
+                  })}
+                </Box>
+              </Box>
             </Box>
           </Box>
-        </Box>
+        </motion.div>
 
-        {loading && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
-        {error && <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+        {loading && <LinearProgress sx={{ mb: 2, borderRadius: 1, bgcolor: '#EEF2FF', '& .MuiLinearProgress-bar': { bgcolor: '#6366F1' } }} />}
 
-        {/* ── KPIs ────────────────────────────────────────────────── */}
+        {/* ── KPI CARDS ──────────────────────────────────────────────────── */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           {[
-            { icon: School,      title: 'Formations',      value: stats.totalFormations,                      color: '#6366F1', bg: '#EEF2FF', trend: trendFormations },
-            { icon: People,      title: 'Participants',     value: stats.totalParticipants,                    color: '#10B981', bg: '#DCFCE7', trend: trendParticipants },
-            { icon: Person,      title: 'Formateurs',       value: stats.totalFormateurs,                      color: '#F59E0B', bg: '#FEF3C7', trend: null },
-            { icon: AttachMoney, title: 'Budget Total',     value: `${(stats.budgetTotal || 0).toLocaleString()} DT`, color: '#EF4444', bg: '#FEE2E2', trend: trendBudget },
-            { icon: CheckCircle, title: 'Taux présence',   value: `${stats.tauxPresence || 0}%`,              color: '#8B5CF6', bg: '#F5F3FF', trend: trendPresence },
-            {
-              icon: Assessment, title: 'Note moy. globale',
-              value: `${noteGlobale.toFixed(1)}/20`,
-              color: '#06B6D4', bg: '#ECFEFF',
-              sub: `${notePct}% de réussite`,
-              trend: null,
-            },
+            { icon: School,      title: 'Formations',     value: stats.totalFormations || 0,    color: PALETTE.indigo.main,  bg: PALETTE.indigo.light,  trend: calcTrend(stats.totalFormations, prevStats.totalFormations), sub: `Année ${primaryYear}` },
+            { icon: People,      title: 'Participants',   value: stats.totalParticipants || 0,  color: PALETTE.emerald.main, bg: PALETTE.emerald.light, trend: calcTrend(stats.totalParticipants, prevStats.totalParticipants), sub: 'inscrits aux formations' },
+            { icon: Person,      title: 'Formateurs',     value: stats.totalFormateurs || 0,    color: PALETTE.amber.main,   bg: PALETTE.amber.light,   trend: null, sub: `${stats.formateursInternes || 0} int. · ${stats.formateursExternes || 0} ext.` },
+            { icon: AttachMoney, title: 'Budget Total',   value: `${((stats.budgetTotal||0)/1000).toFixed(0)}k DT`, color: PALETTE.rose.main, bg: PALETTE.rose.light, trend: calcTrend(stats.budgetTotal, prevStats.budgetTotal), sub: `Objectif : 100k DT` },
+            { icon: CheckCircle, title: 'Taux Présence',  value: `${stats.tauxPresence || 0}%`, color: PALETTE.violet.main,  bg: PALETTE.violet.light,  trend: calcTrend(stats.tauxPresence, prevStats.tauxPresence), sub: 'des inscrits présents' },
+            { icon: Star,        title: 'Note Moy. /20',  value: `${Number(noteGlobale).toFixed(1)}`,  color: PALETTE.cyan.main,    bg: PALETTE.cyan.light,    trend: null, sub: `${notePct}% de réussite` },
           ].map((kpi, i) => (
-              <Grid item xs={6} md={4} lg={2} key={i}>
-                <KpiCard {...kpi} delay={i * 0.05} />
+              <Grid item xs={6} sm={4} lg={2} key={i}>
+                <KpiCard {...kpi} delay={i * 0.06} />
               </Grid>
           ))}
         </Grid>
 
-        {/* ── Tabs ────────────────────────────────────────────────── */}
-        <Tabs
-            value={activeTab}
-            onChange={(_, v) => setActiveTab(v)}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              mb: 3, borderBottom: '1px solid #E2E8F0',
-              '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontSize: '0.845rem', minHeight: 44 },
-              '& .Mui-selected': { color: '#6366F1' },
-              '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' },
-            }}
-        >
-          <Tab label="📈 Évolution mensuelle" />
-          <Tab label="📊 Multi-années (courbes)" />
-          <Tab label="🍩 Répartition" />
-          <Tab label="🎯 Notes & Résultats" />
-          <Tab label="🏆 Performance" />
-          <Tab label="💰 Budget" />
-        </Tabs>
+        {/* ── TABS ─────────────────────────────────────────────────────────── */}
+        <Box sx={{ mb: 3, borderBottom: '1px solid #E2E8F0', overflowX: 'auto' }}>
+          <Tabs
+              value={activeTab}
+              onChange={(_, v) => setActiveTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontSize: '0.835rem', minHeight: 46, gap: 0.5 },
+                '& .Mui-selected': { color: '#6366F1' },
+                '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' },
+              }}
+          >
+            {tabs.map((t, i) => (
+                <Tab key={i} icon={<t.icon sx={{ fontSize: 16 }} />} label={t.label} iconPosition="start" />
+            ))}
+          </Tabs>
+        </Box>
 
-        {/* ══════════════════════════════════════════════════════════
-          TAB 0 : Évolution mensuelle
-      ══════════════════════════════════════════════════════════ */}
-        {activeTab === 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', mb: 3 }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-                    <Box>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
-                        Évolution mensuelle {primaryYear}
-                        {compareYears.length > 0 && ` vs ${compareYears.join(', ')}`}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>Courbes de tendance par mois</Typography>
-                    </Box>
-                    <ToggleButtonGroup value={chartMode} exclusive onChange={(_, v) => v && setChartMode(v)} size="small">
-                      <ToggleButton value="formations"   sx={{ fontSize: '0.75rem', textTransform: 'none' }}>Formations</ToggleButton>
-                      <ToggleButton value="participants" sx={{ fontSize: '0.75rem', textTransform: 'none' }}>Participants</ToggleButton>
-                      <ToggleButton value="budget"       sx={{ fontSize: '0.75rem', textTransform: 'none' }}>Budget</ToggleButton>
-                    </ToggleButtonGroup>
-                  </Box>
+        <AnimatePresence mode="wait">
+          <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+          >
 
-                  <ResponsiveContainer width="100%" height={310}>
-                    <AreaChart data={comparisonData} margin={{ top: 5, right: 20, bottom: 0, left: -10 }}>
-                      <defs>
-                        {activeYears.map((year, idx) => (
-                            <linearGradient key={year} id={`grad_${year}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%"  stopColor={YEAR_COLORS[idx]} stopOpacity={0.18} />
-                              <stop offset="95%" stopColor={YEAR_COLORS[idx]} stopOpacity={0.02} />
-                            </linearGradient>
-                        ))}
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                      <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      {activeYears.map((year, idx) => (
-                          <Area
-                              key={year}
-                              type="monotone"
-                              dataKey={`${chartMode}_${year}`}
-                              name={String(year)}
-                              stroke={YEAR_COLORS[idx]}
-                              fill={`url(#grad_${year})`}
-                              strokeWidth={2.5}
-                              dot={{ fill: YEAR_COLORS[idx], r: 3 }}
-                              activeDot={{ r: 6 }}
-                              strokeDasharray={idx > 0 ? '6 3' : undefined}
-                          />
-                      ))}
-                    </AreaChart>
-                  </ResponsiveContainer>
-
-                  {compareYears.length > 0 && (
-                      <Box sx={{ display: 'flex', gap: 3, mt: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        {activeYears.map((year, idx) => (
-                            <Box key={year} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Box sx={{
-                                width: 28, height: 3, borderRadius: 2,
-                                bgcolor: YEAR_COLORS[idx],
-                                border: idx > 0 ? `1.5px dashed ${YEAR_COLORS[idx]}` : undefined,
-                              }} />
-                              <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: YEAR_COLORS[idx] }}>{year}</Typography>
-                            </Box>
-                        ))}
-                      </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════
-          TAB 1 : Comparaison multi-années (courbe annuelle)
-      ══════════════════════════════════════════════════════════ */}
-        {activeTab === 1 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              {/* Courbe évolution sur 5 ans */}
-              <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', mb: 3 }}>
-                <CardContent>
-                  <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 0.5 }}>
-                    Tendance sur {availableYears.length} ans ({availableYears[availableYears.length-1]} → {availableYears[0]})
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mb: 2 }}>
-                    Vue d'ensemble de la progression annuelle
-                  </Typography>
-                  <ToggleButtonGroup value={chartMode} exclusive onChange={(_, v) => v && setChartMode(v)} size="small" sx={{ mb: 2 }}>
-                    <ToggleButton value="formations"   sx={{ fontSize: '0.75rem', textTransform: 'none' }}>Formations</ToggleButton>
-                    <ToggleButton value="participants" sx={{ fontSize: '0.75rem', textTransform: 'none' }}>Participants</ToggleButton>
-                    <ToggleButton value="budget"       sx={{ fontSize: '0.75rem', textTransform: 'none' }}>Budget</ToggleButton>
-                    <ToggleButton value="taux"         sx={{ fontSize: '0.75rem', textTransform: 'none' }}>Taux présence</ToggleButton>
-                    <ToggleButton value="note"         sx={{ fontSize: '0.75rem', textTransform: 'none' }}>Note moy.</ToggleButton>
-                  </ToggleButtonGroup>
-
-                  <ResponsiveContainer width="100%" height={290}>
-                    <ComposedChart data={annualEvolution} margin={{ top: 5, right: 20, bottom: 0, left: -10 }}>
-                      <defs>
-                        <linearGradient id="annualGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#6366F1" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#6366F1" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                      <XAxis dataKey="year" tick={{ fontSize: 12, fill: '#475569', fontWeight: 600 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area
-                          type="monotone" dataKey={chartMode}
-                          name={chartMode === 'formations' ? 'Formations' : chartMode === 'participants' ? 'Participants' : chartMode === 'budget' ? 'Budget (DT)' : chartMode === 'taux' ? 'Taux présence (%)' : 'Note /20'}
-                          stroke="#6366F1" fill="url(#annualGrad)" strokeWidth={3}
-                          dot={{ fill: '#6366F1', r: 6, strokeWidth: 2, stroke: '#fff' }}
-                          activeDot={{ r: 8 }}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Tableau comparatif enrichi */}
-              <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', mb: 3 }}>
-                <CardContent>
-                  <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
-                    Tableau comparatif — {availableYears.length} années
-                  </Typography>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                          <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.78rem' }}>Indicateur</TableCell>
-                          {[...availableYears].reverse().map((year, idx) => (
-                              <TableCell key={year} align="center" sx={{
-                                fontWeight: 700,
-                                color: year === primaryYear ? '#6366F1' : '#64748B',
-                                fontSize: '0.82rem',
-                                bgcolor: year === primaryYear ? '#EEF2FF' : 'transparent',
-                              }}>
-                                {year}
-                                {year === primaryYear && <Chip label="actuel" size="small" sx={{ ml: 0.5, height: 16, fontSize: '0.6rem', bgcolor: '#6366F1', color: '#fff' }} />}
-                              </TableCell>
-                          ))}
-                          <TableCell align="center" sx={{ fontWeight: 700, color: '#64748B', fontSize: '0.78rem' }}>
-                            Évolution {availableYears[availableYears.length-1]}→{availableYears[0]}
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {[
-                          { label: 'Formations',      key: 'totalFormations',   fmt: v => v },
-                          { label: 'Participants',     key: 'totalParticipants', fmt: v => v },
-                          { label: 'Budget total',     key: 'budgetTotal',       fmt: v => `${(v||0).toLocaleString()} DT` },
-                          { label: 'Taux présence',    key: 'tauxPresence',      fmt: v => `${v}%` },
-                          { label: 'Note moy.',        key: 'noteMoyenneGlobale',fmt: v => v ? `${Number(v).toFixed(1)}/20 (${Math.round(v/20*100)}%)` : '—' },
-                        ].map((row, i) => {
-                          const years = [...availableYears].reverse();
-                          const vals = years.map(y => (allStats[y] || generateDemoData(y))[row.key] || 0);
-                          const first = vals[0], last = vals[vals.length - 1];
-                          const evolPct = first > 0 ? Math.round((last - first) / first * 100) : null;
-                          return (
-                              <TableRow key={i} sx={{ '&:hover': { bgcolor: '#FAFBFF' } }}>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '0.855rem', color: '#0F172A' }}>{row.label}</TableCell>
-                                {vals.map((v, vi) => (
-                                    <TableCell key={vi} align="center" sx={{
-                                      fontSize: '0.855rem',
-                                      fontWeight: years[vi] === primaryYear ? 800 : 600,
-                                      color: years[vi] === primaryYear ? '#6366F1' : '#0F172A',
-                                      bgcolor: years[vi] === primaryYear ? '#EEF2FF' : 'transparent',
-                                    }}>
-                                      {row.fmt(v)}
-                                    </TableCell>
-                                ))}
-                                <TableCell align="center">
-                                  {evolPct !== null && (
-                                      <Chip
-                                          label={`${evolPct >= 0 ? '+' : ''}${evolPct}%`}
-                                          size="small"
-                                          icon={evolPct >= 0 ? <TrendingUp sx={{ fontSize: '11px !important' }} /> : <TrendingDown sx={{ fontSize: '11px !important' }} />}
-                                          sx={{
-                                            bgcolor: evolPct >= 0 ? '#DCFCE7' : '#FEE2E2',
-                                            color: evolPct >= 0 ? '#15803D' : '#DC2626',
-                                            fontWeight: 700, fontSize: '0.72rem',
-                                          }}
-                                      />
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </CardContent>
-              </Card>
-
-              {/* Barres groupées par domaine */}
-              {activeYears.length >= 2 && (
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
-                        Formations par domaine — {activeYears.join(' vs ')}
-                      </Typography>
-                      <ResponsiveContainer width="100%" height={280}>
-                        <BarChart
-                            data={(stats.formationsParDomaine || []).map(d => {
-                              const row = { name: d.name };
-                              activeYears.forEach(y => {
-                                const yStats = allStats[y] || generateDemoData(y);
-                                const found = (yStats.formationsParDomaine || []).find(x => x.name === d.name);
-                                row[String(y)] = found?.value || 0;
-                              });
-                              return row;
-                            })}
-                            barSize={20}
-                            barGap={2}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
-                          <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend />
-                          {activeYears.map((year, idx) => (
-                              <Bar key={year} dataKey={String(year)} name={String(year)} fill={YEAR_COLORS[idx]} radius={[4, 4, 0, 0]} />
-                          ))}
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-              )}
-            </motion.div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════
-          TAB 2 : Répartition
-      ══════════════════════════════════════════════════════════ */}
-        {activeTab === 2 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <Grid container spacing={2.5}>
-                {/* Donut statuts */}
-                <Grid item xs={12} md={5}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
-                        Statuts des formations — {primaryYear}
-                      </Typography>
-                      <ResponsiveContainer width="100%" height={220}>
-                        <PieChart>
-                          <Pie data={stats.formationsParStatut || []} cx="50%" cy="50%"
-                               innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value">
-                            {(stats.formationsParStatut || []).map((entry, i) => (
-                                <Cell key={i} fill={entry.color || COLORS[i]} strokeWidth={0} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        {(stats.formationsParStatut || []).map((d, i) => {
-                          const total = (stats.formationsParStatut || []).reduce((s, x) => s + x.value, 0);
-                          const pct = total > 0 ? Math.round(d.value / total * 100) : 0;
-                          return (
-                              <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: d.color }} />
-                                  <Typography sx={{ fontSize: '0.82rem', color: '#475569' }}>{d.name}</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{d.value}</Typography>
-                                  <Chip label={`${pct}%`} size="small" sx={{ height: 18, fontSize: '0.68rem', bgcolor: d.color + '20', color: d.color, fontWeight: 700 }} />
-                                </Box>
-                              </Box>
-                          );
-                        })}
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                {/* Barres + courbe budget par domaine */}
-                <Grid item xs={12} md={7}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
-                        Formations & Budget par domaine — {primaryYear}
-                      </Typography>
-                      <ResponsiveContainer width="100%" height={280}>
-                        <ComposedChart data={stats.formationsParDomaine || []} barSize={28}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
-                          <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
-                          <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend />
-                          <Bar yAxisId="left" dataKey="value" name="Formations" radius={[4, 4, 0, 0]}>
-                            {(stats.formationsParDomaine || []).map((_, i) => (
-                                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                            ))}
-                          </Bar>
-                          <Line yAxisId="right" type="monotone" dataKey="budget" name="Budget (DT)"
-                                stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B', r: 4 }} />
-                        </ComposedChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                {/* Participants par structure */}
-                <Grid item xs={12}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
-                        Participants par Structure — {primaryYear}
-                      </Typography>
-                      <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={stats.participantsParStructure || []} layout="vertical" barSize={24}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                          <XAxis type="number" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} width={130} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar dataKey="participants" name="Participants" radius={[0, 6, 6, 0]}>
-                            {(stats.participantsParStructure || []).map((_, i) => (
-                                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            </motion.div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════
-          TAB 3 : Notes & Résultats — AMÉLIORÉ
-      ══════════════════════════════════════════════════════════ */}
-        {activeTab === 3 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <Grid container spacing={2.5}>
-                {/* Jauge note globale */}
-                <Grid item xs={12} md={4}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
-                    <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
-                        Note moyenne globale — {primaryYear}
-                      </Typography>
-                      {/* Jauge circulaire SVG */}
-                      <Box sx={{ position: 'relative', width: 160, height: 160, mb: 2 }}>
-                        <svg viewBox="0 0 160 160" style={{ transform: 'rotate(-90deg)' }}>
-                          <circle cx="80" cy="80" r="60" fill="none" stroke="#F1F5F9" strokeWidth="14" />
-                          <circle cx="80" cy="80" r="60" fill="none"
-                                  stroke={notePct >= 80 ? '#10B981' : notePct >= 65 ? '#F59E0B' : '#EF4444'}
-                                  strokeWidth="14"
-                                  strokeDasharray={`${notePct / 100 * 376.8} 376.8`}
-                                  strokeLinecap="round" />
-                          {/* Ligne de seuil admissibilité à 70% */}
-                          <circle cx="80" cy="80" r="60" fill="none"
-                                  stroke="#CBD5E1" strokeWidth="3"
-                                  strokeDasharray={`2 ${376.8 - 2}`}
-                                  strokeDashoffset={-(70 / 100 * 376.8)}
-                                  strokeLinecap="round" />
-                        </svg>
-                        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                          <Typography sx={{ fontWeight: 800, fontSize: '1.8rem', color: notePct >= 80 ? '#10B981' : notePct >= 65 ? '#F59E0B' : '#EF4444', lineHeight: 1 }}>
-                            {noteGlobale.toFixed(1)}
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>/20</Typography>
-                        </Box>
-                      </Box>
-                      <Chip
-                          label={`${notePct}% de réussite`}
-                          sx={{
-                            fontWeight: 700, fontSize: '0.9rem', height: 32, px: 1,
-                            bgcolor: notePct >= 80 ? '#DCFCE7' : notePct >= 65 ? '#FEF3C7' : '#FEE2E2',
-                            color: notePct >= 80 ? '#15803D' : notePct >= 65 ? '#92400E' : '#DC2626',
-                          }}
-                      />
-                      <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mt: 1.5, textAlign: 'center' }}>
-                        Seuil admissibilité : 70%
-                      </Typography>
-
-                      {/* Mini-comparaison vs année précédente */}
-                      {prevStats?.noteMoyenneGlobale && (
-                          <Box sx={{ mt: 2, p: 1.5, borderRadius: 2, bgcolor: '#F8FAFC', border: '1px solid #E2E8F0', width: '100%', textAlign: 'center' }}>
-                            <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>vs {primaryYear - 1}</Typography>
-                            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: noteGlobale >= (prevStats.noteMoyenneGlobale || 14) ? '#10B981' : '#EF4444' }}>
-                              {noteGlobale >= (prevStats.noteMoyenneGlobale || 14) ? '+' : ''}
-                              {(noteGlobale - (prevStats.noteMoyenneGlobale || 14)).toFixed(1)} pts
+            {/* ════════════════════════════════════════════════
+              TAB 0 : ÉVOLUTION MENSUELLE
+          ════════════════════════════════════════════════ */}
+            {activeTab === 0 && (
+                <Grid container spacing={2.5}>
+                  <Grid item xs={12}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, flexWrap: 'wrap', gap: 1.5 }}>
+                          <Box>
+                            <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
+                              Évolution mensuelle — {activeYears.join(' vs ')}
                             </Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>Courbes de tendance par mois · comparaison multi-années</Typography>
                           </Box>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Grid>
+                          <ToggleButtonGroup value={chartMetric} exclusive onChange={(_, v) => v && setChartMetric(v)} size="small">
+                            {[
+                              { v: 'formations',   label: 'Formations' },
+                              { v: 'participants', label: 'Participants' },
+                              { v: 'budget',       label: 'Budget' },
+                            ].map(({ v, label }) => (
+                                <ToggleButton key={v} value={v} sx={{ textTransform: 'none', fontSize: '0.78rem', px: 1.5, py: 0.5, '&.Mui-selected': { bgcolor: '#EEF2FF', color: '#6366F1' } }}>
+                                  {label}
+                                </ToggleButton>
+                            ))}
+                          </ToggleButtonGroup>
+                        </Box>
 
-                {/* Barres notes par domaine avec % */}
-                <Grid item xs={12} md={8}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
-                          Notes par domaine — {primaryYear}
-                        </Typography>
-                        <Chip label="Note /20 + %" size="small" sx={{ bgcolor: '#EEF2FF', color: '#6366F1', fontWeight: 600 }} />
-                      </Box>
-                      {(stats.notesMoyennesParDomaine || []).map((d, i) => (
-                          <NoteBar
-                              key={i}
-                              domaine={d.domaine}
-                              note={d.note}
-                              pourcentage={d.pourcentage || Math.round(d.note / 20 * 100)}
-                              color={COLORS[i % COLORS.length]}
-                              index={i}
-                          />
-                      ))}
-                    </CardContent>
-                  </Card>
-                </Grid>
+                        {/* Légende custom */}
+                        <Box sx={{ display: 'flex', gap: 2.5, mb: 2, flexWrap: 'wrap' }}>
+                          {activeYears.map((year, idx) => {
+                            const pal = YEAR_PALETTE[idx];
+                            return (
+                                <Box key={year} sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                  <Box sx={{
+                                    width: 24, height: 3, borderRadius: 2,
+                                    bgcolor: pal.main,
+                                    border: idx > 0 ? `1px dashed ${pal.main}` : undefined,
+                                  }} />
+                                  <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: pal.main }}>{year}</Typography>
+                                  {year === primaryYear && <Chip label="principal" size="small" sx={{ height: 14, fontSize: '0.6rem', bgcolor: pal.main, color: '#fff' }} />}
+                                </Box>
+                            );
+                          })}
+                        </Box>
 
-                {/* Graphique notes par domaine avec axe % */}
-                <Grid item xs={12}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 0.5 }}>
-                        Comparaison notes par domaine
-                        {compareYears.length > 0 ? ` — ${activeYears.join(' vs ')}` : ` — ${primaryYear}`}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mb: 2 }}>
-                        Axe gauche : note /20 · Axe droit : % de réussite · Ligne rouge = seuil 70%
-                      </Typography>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <ComposedChart
-                            data={(stats.notesMoyennesParDomaine || []).map(d => {
-                              const row = { domaine: d.domaine };
-                              activeYears.forEach(y => {
-                                const yStats = allStats[y] || generateDemoData(y);
-                                const found = (yStats.notesMoyennesParDomaine || []).find(x => x.domaine === d.domaine);
-                                row[`note_${y}`] = found ? Math.round(found.note * 10) / 10 : 0;
-                                row[`pct_${y}`] = found ? Math.round(found.note / 20 * 100) : 0;
-                              });
-                              return row;
-                            })}
-                            barSize={22}
-                            margin={{ top: 5, right: 30, bottom: 0, left: -10 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                          <XAxis dataKey="domaine" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
-                          <YAxis yAxisId="left"  domain={[0, 20]} tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} label={{ value: '/20', position: 'insideTop', fontSize: 10, fill: '#94A3B8' }} />
-                          <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickFormatter={v => `${v}%`} />
-                          <Tooltip content={<NotesTooltip />} />
-                          <Legend />
-                          {/* Ligne seuil admissibilité à 14/20 = 70% */}
-                          <ReferenceLine yAxisId="left" y={14} stroke="#EF4444" strokeDasharray="4 4" strokeWidth={1.5}
-                                         label={{ value: '70% (14/20)', position: 'right', fontSize: 10, fill: '#EF4444' }} />
-                          {activeYears.map((year, idx) => (
-                              <Bar key={year} yAxisId="left" dataKey={`note_${year}`}
-                                   name={`Note ${year}`}
-                                   fill={YEAR_COLORS[idx]} radius={[4, 4, 0, 0]} opacity={0.85} />
-                          ))}
-                          {/* Courbe pourcentage sur axe droit */}
-                          {activeYears.map((year, idx) => (
-                              <Line key={`pct_${year}`} yAxisId="right" type="monotone"
-                                    dataKey={`pct_${year}`}
-                                    name={`% réussite ${year}`}
-                                    stroke={YEAR_COLORS[idx]}
-                                    strokeWidth={2} strokeDasharray={idx > 0 ? '5 3' : undefined}
-                                    dot={{ fill: YEAR_COLORS[idx], r: 4, strokeWidth: 2, stroke: '#fff' }}
-                              />
-                          ))}
-                        </ComposedChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            </motion.div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════
-          TAB 4 : Performance formateurs
-      ══════════════════════════════════════════════════════════ */}
-        {activeTab === 4 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} md={8}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                        <EmojiEvents sx={{ color: '#F59E0B', fontSize: 22 }} />
-                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
-                          Classement des Formateurs — {primaryYear}
-                        </Typography>
-                      </Box>
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              {['#', 'Formateur', 'Type', 'Sessions', 'Note moy.', '% réussite', 'Satisfaction'].map(h => (
-                                  <TableCell key={h} sx={{ fontWeight: 700, fontSize: '0.72rem', color: '#94A3B8', py: 1 }}>{h}</TableCell>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <AreaChart data={monthlyComparison} margin={{ top: 5, right: 20, bottom: 0, left: -10 }}>
+                            <defs>
+                              {activeYears.map((year, idx) => (
+                                  <linearGradient key={year} id={`grd_${year}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%"  stopColor={YEAR_PALETTE[idx].main} stopOpacity={0.15} />
+                                    <stop offset="95%" stopColor={YEAR_PALETTE[idx].main} stopOpacity={0.01} />
+                                  </linearGradient>
                               ))}
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {(stats.topFormateurs || []).map((f, i) => {
-                              const notePct = f.noteMoyenne ? Math.round(f.noteMoyenne / 20 * 100) : null;
-                              return (
-                                  <TableRow key={i} sx={{ '&:hover': { bgcolor: '#FAFBFF' } }}>
-                                    <TableCell sx={{ py: 1.5 }}>
-                                      <Avatar sx={{
-                                        width: 26, height: 26, fontSize: '0.7rem', fontWeight: 800,
-                                        bgcolor: i === 0 ? '#F59E0B' : i === 1 ? '#94A3B8' : i === 2 ? '#CD7F32' : '#E2E8F0',
-                                        color: i < 3 ? '#fff' : '#475569',
-                                      }}>{i + 1}</Avatar>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Typography sx={{ fontWeight: 600, fontSize: '0.855rem', color: '#0F172A' }}>{f.nom}</Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Chip label={f.type} size="small" sx={{
-                                        height: 18, fontSize: '0.65rem',
-                                        bgcolor: f.type === 'INTERNE' ? '#DCFCE7' : '#EDE9FE',
-                                        color: f.type === 'INTERNE' ? '#15803D' : '#7C3AED',
-                                        fontWeight: 700,
-                                      }} />
-                                    </TableCell>
-                                    <TableCell align="center">
-                                      <Chip label={f.nbFormations} size="small" variant="outlined" sx={{ fontWeight: 700, fontSize: '0.72rem' }} />
-                                    </TableCell>
-                                    <TableCell align="center">
-                                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>
-                                        {f.noteMoyenne ? `${Number(f.noteMoyenne).toFixed(1)}/20` : '—'}
-                                      </Typography>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                      {notePct && (
-                                          <Chip label={`${notePct}%`} size="small" sx={{
-                                            height: 18, fontSize: '0.68rem', fontWeight: 700,
-                                            bgcolor: notePct >= 80 ? '#DCFCE7' : notePct >= 65 ? '#FEF3C7' : '#FEE2E2',
-                                            color: notePct >= 80 ? '#15803D' : notePct >= 65 ? '#92400E' : '#DC2626',
-                                          }} />
-                                      )}
-                                    </TableCell>
-                                    <TableCell align="center">
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#F59E0B' }}>
-                                          ⭐ {f.satisfaction?.toFixed(1)}
-                                        </Typography>
-                                      </Box>
-                                    </TableCell>
-                                  </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                            <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                            <Tooltip content={<DarkTooltip />} />
+                            {activeYears.map((year, idx) => (
+                                <Area
+                                    key={year}
+                                    type="monotone"
+                                    dataKey={`val_${year}`}
+                                    name={String(year)}
+                                    stroke={YEAR_PALETTE[idx].main}
+                                    fill={`url(#grd_${year})`}
+                                    strokeWidth={idx === 0 ? 3 : 2}
+                                    strokeDasharray={idx > 0 ? '6 3' : undefined}
+                                    dot={{ fill: YEAR_PALETTE[idx].main, r: idx === 0 ? 4 : 3, strokeWidth: 0 }}
+                                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
+                                />
+                            ))}
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
 
-                <Grid item xs={12} md={4}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
-                        Taux de présence — {primaryYear}
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
-                        <Box sx={{ position: 'relative', width: 150, height: 150 }}>
-                          <svg viewBox="0 0 160 160" style={{ transform: 'rotate(-90deg)' }}>
-                            <circle cx="80" cy="80" r="60" fill="none" stroke="#F1F5F9" strokeWidth="14" />
-                            <circle cx="80" cy="80" r="60" fill="none"
-                                    stroke="#10B981" strokeWidth="14"
-                                    strokeDasharray={`${(stats.tauxPresence || 0) / 100 * 376.8} 376.8`}
-                                    strokeLinecap="round" />
-                          </svg>
-                          <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                            <Typography sx={{ fontWeight: 800, fontSize: '1.9rem', color: '#10B981', lineHeight: 1 }}>
-                              {stats.tauxPresence || 0}%
+                  {/* Mini cards tendance mensuelle */}
+                  <Grid item xs={12}>
+                    <Grid container spacing={2}>
+                      {(stats.evolutionMensuelle || []).slice(0, 6).map((m, i) => (
+                          <Grid item xs={6} sm={4} md={2} key={i}>
+                            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}>
+                              <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 2.5, boxShadow: 'none', textAlign: 'center' }}>
+                                <CardContent sx={{ p: 1.5 }}>
+                                  <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8', mb: 0.3 }}>{m.mois}</Typography>
+                                  <Typography sx={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A' }}>{m.formations}</Typography>
+                                  <Typography sx={{ fontSize: '0.68rem', color: '#64748B' }}>formations</Typography>
+                                  <Box sx={{ height: 3, bgcolor: '#F1F5F9', borderRadius: 2, mt: 1, overflow: 'hidden' }}>
+                                    <Box sx={{
+                                      height: '100%', borderRadius: 2,
+                                      bgcolor: PALETTE.indigo.main,
+                                      width: `${Math.round((m.formations || 0) / Math.max(...(stats.evolutionMensuelle||[]).map(x => x.formations||1)) * 100)}%`,
+                                    }} />
+                                  </Box>
+                                </CardContent>
+                              </Card>
+                            </motion.div>
+                          </Grid>
+                      ))}
+                    </Grid>
+                  </Grid>
+                </Grid>
+            )}
+
+            {/* ════════════════════════════════════════════════
+              TAB 1 : COMPARAISON MULTI-ANNÉES
+          ════════════════════════════════════════════════ */}
+            {activeTab === 1 && (
+                <Grid container spacing={2.5}>
+                  {/* Courbe tendance 5 ans */}
+                  <Grid item xs={12}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                          <Box>
+                            <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
+                              Tendance pluriannuelle — {availableYears[availableYears.length-1]}→{availableYears[0]}
                             </Typography>
-                            <Typography sx={{ fontSize: '0.72rem', color: '#64748B' }}>Présence</Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>Progression sur {availableYears.length} ans</Typography>
                           </Box>
+                          <ToggleButtonGroup value={chartMetric} exclusive onChange={(_, v) => v && setChartMetric(v)} size="small">
+                            {[
+                              { v: 'formations', label: 'Formations' },
+                              { v: 'participants', label: 'Participants' },
+                              { v: 'budget', label: 'Budget' },
+                              { v: 'tauxPresence', label: 'Présence' },
+                              { v: 'noteMoyenne', label: 'Note' },
+                            ].map(({ v, label }) => (
+                                <ToggleButton key={v} value={v} sx={{ textTransform: 'none', fontSize: '0.75rem', px: 1.2, py: 0.4, '&.Mui-selected': { bgcolor: '#EEF2FF', color: '#6366F1' } }}>
+                                  {label}
+                                </ToggleButton>
+                            ))}
+                          </ToggleButtonGroup>
                         </Box>
-                        <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
-                          {[
-                            { label: 'Internes', value: stats.formateursInternes || 0, color: '#10B981' },
-                            { label: 'Externes', value: stats.formateursExternes || 0, color: '#8B5CF6' },
-                          ].map((item, i) => (
-                              <Box key={i} sx={{ textAlign: 'center', p: 2, borderRadius: 2, bgcolor: item.color + '10', border: `1px solid ${item.color}30`, minWidth: 80 }}>
-                                <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', color: item.color }}>{item.value}</Typography>
-                                <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>{item.label}</Typography>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <ComposedChart data={annualTrend} margin={{ top: 10, right: 20, bottom: 0, left: -10 }}>
+                            <defs>
+                              <linearGradient id="annGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%"  stopColor="#6366F1" stopOpacity={0.2} />
+                                <stop offset="95%" stopColor="#6366F1" stopOpacity={0.01} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                            <XAxis dataKey="year" tick={{ fontSize: 12, fill: '#475569', fontWeight: 700 }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                            <Tooltip content={<DarkTooltip />} />
+                            <Area type="monotone" dataKey={chartMetric}
+                                  name={chartMetric === 'formations' ? 'Formations' : chartMetric === 'participants' ? 'Participants' : chartMetric === 'budget' ? 'Budget (DT)' : chartMetric === 'tauxPresence' ? 'Taux présence (%)' : 'Note moy. /20'}
+                                  stroke="#6366F1" fill="url(#annGrad)" strokeWidth={3}
+                                  dot={{ fill: '#6366F1', r: 7, strokeWidth: 2, stroke: '#fff' }}
+                                  activeDot={{ r: 9 }}
+                            />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Tableau comparatif */}
+                  <Grid item xs={12}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
+                          Tableau comparatif — {availableYears.length} années · indicateurs clés
+                        </Typography>
+                        <ComparisonTable
+                            allStats={allStats}
+                            years={availableYears}
+                            primaryYear={primaryYear}
+                        />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Barres groupées par domaine si comparaison active */}
+                  {compareYears.length > 0 && (
+                      <Grid item xs={12}>
+                        <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                          <CardContent sx={{ p: 3 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
+                              Formations par domaine — {activeYears.join(' vs ')}
+                            </Typography>
+                            <ResponsiveContainer width="100%" height={260}>
+                              <BarChart
+                                  data={(stats.formationsParDomaine || []).map(d => {
+                                    const row = { name: d.name };
+                                    activeYears.forEach(year => {
+                                      const yd = allStats[year] || generateDemoData(year);
+                                      const found = (yd.formationsParDomaine || []).find(x => x.name === d.name);
+                                      row[String(year)] = found?.value || 0;
+                                    });
+                                    return row;
+                                  })}
+                                  barSize={18} barGap={3}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
+                                <Tooltip content={<DarkTooltip />} />
+                                {activeYears.map((year, idx) => (
+                                    <Bar key={year} dataKey={String(year)} name={String(year)} fill={YEAR_PALETTE[idx].main} radius={[4, 4, 0, 0]} />
+                                ))}
+                              </BarChart>
+                            </ResponsiveContainer>
+                            {/* Légende custom */}
+                            <Box sx={{ display: 'flex', gap: 2, mt: 1.5, justifyContent: 'center' }}>
+                              {activeYears.map((year, idx) => (
+                                  <Box key={year} sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: 2, bgcolor: YEAR_PALETTE[idx].main }} />
+                                    <Typography sx={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>{year}</Typography>
+                                  </Box>
+                              ))}
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                  )}
+                </Grid>
+            )}
+
+            {/* ════════════════════════════════════════════════
+              TAB 2 : RÉPARTITION
+          ════════════════════════════════════════════════ */}
+            {activeTab === 2 && (
+                <Grid container spacing={2.5}>
+                  {/* Donut statuts */}
+                  <Grid item xs={12} md={5}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 0.5 }}>Statuts des formations</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mb: 2 }}>{primaryYear}</Typography>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <PieChart>
+                            <Pie data={stats.formationsParStatut || []} cx="50%" cy="50%"
+                                 innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
+                              {(stats.formationsParStatut || []).map((entry, i) => (
+                                  <Cell key={i} fill={entry.color || DOMAIN_COLORS[i]} strokeWidth={0} />
+                              ))}
+                            </Pie>
+                            <Tooltip content={<DarkTooltip />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          {(stats.formationsParStatut || []).map((d, i) => {
+                            const total = (stats.formationsParStatut || []).reduce((s, x) => s + x.value, 0);
+                            const pct = total > 0 ? Math.round(d.value / total * 100) : 0;
+                            return (
+                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: d.color }} />
+                                    <Typography sx={{ fontSize: '0.82rem', color: '#475569' }}>{d.name}</Typography>
+                                  </Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{d.value}</Typography>
+                                    <Chip label={`${pct}%`} size="small" sx={{ height: 18, fontSize: '0.68rem', bgcolor: d.color + '20', color: d.color, fontWeight: 700 }} />
+                                  </Box>
+                                </Box>
+                            );
+                          })}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Barres + ligne domaine */}
+                  <Grid item xs={12} md={7}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 0.5 }}>Formations & Budget par domaine</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mb: 2 }}>{primaryYear} · nb formations (barres) + budget (courbe)</Typography>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <ComposedChart data={stats.formationsParDomaine || []} barSize={28}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} />
+                            <YAxis yAxisId="l" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} />
+                            <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                            <Tooltip content={<DarkTooltip />} />
+                            <Bar yAxisId="l" dataKey="value" name="Formations" radius={[5, 5, 0, 0]}>
+                              {(stats.formationsParDomaine || []).map((_, i) => (
+                                  <Cell key={i} fill={DOMAIN_COLORS[i % DOMAIN_COLORS.length]} />
+                              ))}
+                            </Bar>
+                            <Line yAxisId="r" type="monotone" dataKey="budget" name="Budget (DT)"
+                                  stroke={PALETTE.amber.main} strokeWidth={2.5}
+                                  dot={{ fill: PALETTE.amber.main, r: 5, strokeWidth: 2, stroke: '#fff' }} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Participants par structure */}
+                  <Grid item xs={12}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>Participants par structure — {primaryYear}</Typography>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={stats.participantsParStructure || []} layout="vertical" barSize={22}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} width={110} />
+                            <Tooltip content={<DarkTooltip />} />
+                            <Bar dataKey="participants" name="Participants" radius={[0, 6, 6, 0]}>
+                              {(stats.participantsParStructure || []).map((_, i) => (
+                                  <Cell key={i} fill={DOMAIN_COLORS[i % DOMAIN_COLORS.length]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+            )}
+
+            {/* ════════════════════════════════════════════════
+              TAB 3 : NOTES & RÉSULTATS
+          ════════════════════════════════════════════════ */}
+            {activeTab === 3 && (
+                <Grid container spacing={2.5}>
+                  {/* Jauges globales */}
+                  <Grid item xs={12} md={4}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 3, textAlign: 'center' }}>
+                          Indicateurs de qualité — {primaryYear}
+                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-around', mb: 3 }}>
+                          <CircularGauge
+                              value={noteGlobale}
+                              max={20}
+                              label="Note globale"
+                              color={notePct >= 80 ? PALETTE.emerald.main : notePct >= 65 ? PALETTE.amber.main : PALETTE.rose.main}
+                          />
+                          <CircularGauge
+                              value={stats.tauxPresence || 0}
+                              max={100}
+                              label="Taux présence"
+                              color={PALETTE.violet.main}
+                              size={130}
+                          />
+                        </Box>
+                        {/* Comparaison vs année précédente */}
+                        {prevStats && (
+                            <Box sx={{ p: 2, borderRadius: 2, bgcolor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                              <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8', mb: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                vs {primaryYear - 1}
+                              </Typography>
+                              {[
+                                { label: 'Note moy.', cur: noteGlobale, prev: prevStats.noteMoyenneGlobale || 14, fmt: v => `${Number(v).toFixed(1)}/20` },
+                                { label: 'Taux présence', cur: stats.tauxPresence || 0, prev: prevStats.tauxPresence || 0, fmt: v => `${v}%` },
+                              ].map((item, i) => {
+                                const delta = Number(item.cur) - Number(item.prev);
+                                const isPos = delta >= 0;
+                                return (
+                                    <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                                      <Typography sx={{ fontSize: '0.82rem', color: '#64748B' }}>{item.label}</Typography>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{item.fmt(item.cur)}</Typography>
+                                        <Chip
+                                            size="small"
+                                            label={`${isPos ? '+' : ''}${Number(delta).toFixed(1)}`}
+                                            sx={{
+                                              height: 18, fontSize: '0.68rem', fontWeight: 700,
+                                              bgcolor: isPos ? '#DCFCE7' : '#FEE2E2',
+                                              color: isPos ? '#15803D' : '#DC2626',
+                                            }}
+                                        />
+                                      </Box>
+                                    </Box>
+                                );
+                              })}
+                            </Box>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Barres notes par domaine */}
+                  <Grid item xs={12} md={8}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
+                            Notes par domaine — {primaryYear}
+                          </Typography>
+                          <Chip label="Note /20 + % réussite" size="small" sx={{ bgcolor: '#EEF2FF', color: '#6366F1', fontWeight: 600 }} />
+                        </Box>
+                        {(stats.notesMoyennesParDomaine || []).map((d, i) => (
+                            <NoteProgressBar
+                                key={i}
+                                domaine={d.domaine}
+                                note={d.note}
+                                pourcentage={d.pourcentage || Math.round(d.note / 20 * 100)}
+                                color={DOMAIN_COLORS[i % DOMAIN_COLORS.length]}
+                                index={i}
+                            />
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Graphique comparaison notes multi-années par domaine */}
+                  <Grid item xs={12}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 0.5 }}>
+                          Comparaison notes par domaine — {activeYears.join(' vs ')}
+                        </Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mb: 2 }}>
+                          Axe gauche : note /20 · Courbe : % réussite · Ligne rouge = seuil admissibilité 70% (14/20)
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <ComposedChart data={notesComparisonData} barSize={18} margin={{ top: 5, right: 30, bottom: 0, left: -10 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                            <XAxis dataKey="domaine" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} />
+                            <YAxis yAxisId="l" domain={[0, 20]} tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} />
+                            <YAxis yAxisId="r" orientation="right" domain={[0, 100]} tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickFormatter={v => `${v}%`} />
+                            <Tooltip content={<DarkTooltip />} />
+                            <ReferenceLine yAxisId="l" y={14} stroke={PALETTE.rose.main} strokeDasharray="5 4" strokeWidth={1.5}
+                                           label={{ value: '14/20 = 70%', position: 'insideRight', fontSize: 10, fill: PALETTE.rose.main, fontWeight: 700 }} />
+                            {activeYears.map((year, idx) => (
+                                <Bar key={year} yAxisId="l" dataKey={`note_${year}`} name={`Note ${year}`}
+                                     fill={YEAR_PALETTE[idx].main} radius={[4, 4, 0, 0]} opacity={0.85} barSize={20 - idx * 3} />
+                            ))}
+                            {activeYears.map((year, idx) => (
+                                <Line key={`pct_${year}`} yAxisId="r" type="monotone"
+                                      dataKey={`pct_${year}`} name={`% réussite ${year}`}
+                                      stroke={YEAR_PALETTE[idx].main} strokeWidth={2}
+                                      strokeDasharray={idx > 0 ? '5 3' : undefined}
+                                      dot={{ fill: YEAR_PALETTE[idx].main, r: 4, strokeWidth: 2, stroke: '#fff' }}
+                                />
+                            ))}
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                        {/* Légende */}
+                        <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                          {activeYears.map((year, idx) => (
+                              <Box key={year} sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                <Box sx={{ width: 12, height: 10, borderRadius: 1, bgcolor: YEAR_PALETTE[idx].main }} />
+                                <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>Note {year}</Typography>
+                                <Box sx={{ width: 16, height: 2, bgcolor: YEAR_PALETTE[idx].main, ml: 0.5 }} />
+                                <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>% {year}</Typography>
                               </Box>
                           ))}
                         </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </motion.div>
-        )}
+            )}
 
-        {/* ══════════════════════════════════════════════════════════
-          TAB 5 : Budget
-      ══════════════════════════════════════════════════════════ */}
-        {activeTab === 5 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} md={8}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>
-                        Budget par trimestre — Réel vs Objectif {primaryYear}
-                      </Typography>
-                      <ResponsiveContainer width="100%" height={280}>
-                        <BarChart data={stats.budgetParTrimestre || []} barSize={28}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                          <XAxis dataKey="trimestre" tick={{ fontSize: 12, fill: '#94A3B8' }} axisLine={false} />
-                          <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend />
-                          <Bar dataKey="budget" name="Budget réel" fill="#6366F1" radius={[6, 6, 0, 0]} />
-                          <Bar dataKey="objectif" name="Objectif" fill="#E2E8F0" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>Synthèse Budget</Typography>
-                      {[
-                        { label: 'Budget total', value: `${(stats.budgetTotal || 0).toLocaleString()} DT`, color: '#6366F1' },
-                        { label: 'Budget moy./formation', value: stats.totalFormations > 0 ? `${Math.round(stats.budgetTotal / stats.totalFormations).toLocaleString()} DT` : '—', color: '#10B981' },
-                        { label: 'Objectif annuel', value: `${(100000).toLocaleString()} DT`, color: '#F59E0B' },
-                        { label: 'Taux réalisation', value: `${Math.round((stats.budgetTotal || 0) / 100000 * 100)}%`, color: stats.budgetTotal >= 100000 ? '#10B981' : '#EF4444' },
-                      ].map((item, i) => (
-                          <Box key={i} sx={{ mb: 2, p: 2, borderRadius: 2, bgcolor: item.color + '08', border: `1px solid ${item.color}20` }}>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#64748B', mb: 0.5 }}>{item.label}</Typography>
-                            <Typography sx={{ fontWeight: 800, fontSize: '1.2rem', color: item.color }}>{item.value}</Typography>
+            {/* ════════════════════════════════════════════════
+              TAB 4 : PERFORMANCE FORMATEURS
+          ════════════════════════════════════════════════ */}
+            {activeTab === 4 && (
+                <Grid container spacing={2.5}>
+                  <Grid item xs={12} md={8}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                          <WorkspacePremium sx={{ color: PALETTE.amber.main, fontSize: 24 }} />
+                          <Box>
+                            <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
+                              Classement des Formateurs — {primaryYear}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                              Classé par note moyenne obtenue par leurs apprenants
+                            </Typography>
                           </Box>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </Grid>
+                        </Box>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                                {['#', 'Formateur', 'Type', 'Sessions', 'Note moy.', '% Réussite', 'Satisfaction'].map(h => (
+                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: '0.72rem', color: '#94A3B8', py: 1.5 }}>{h}</TableCell>
+                                ))}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {(stats.topFormateurs || []).map((f, i) => {
+                                const notePct = f.noteMoyenne ? Math.round(f.noteMoyenne / 20 * 100) : null;
+                                const medals = ['🥇', '🥈', '🥉'];
+                                return (
+                                    <TableRow key={i} sx={{ '&:hover': { bgcolor: '#FAFBFF' } }}>
+                                      <TableCell sx={{ py: 1.5 }}>
+                                        <Box sx={{ fontSize: '1.1rem' }}>{medals[i] || `${i+1}`}</Box>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                                          <Avatar sx={{
+                                            width: 32, height: 32, fontSize: '0.75rem', fontWeight: 700,
+                                            bgcolor: f.type === 'INTERNE' ? PALETTE.emerald.light : PALETTE.violet.light,
+                                            color: f.type === 'INTERNE' ? PALETTE.emerald.dark : PALETTE.violet.dark,
+                                          }}>
+                                            {(f.prenom||'').charAt(0)}{(f.nom||'').charAt(0)}
+                                          </Avatar>
+                                          <Typography sx={{ fontWeight: 600, fontSize: '0.855rem', color: '#0F172A' }}>{f.nom}</Typography>
+                                        </Box>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Chip label={f.type} size="small" sx={{
+                                          height: 18, fontSize: '0.65rem', fontWeight: 700,
+                                          bgcolor: f.type === 'INTERNE' ? PALETTE.emerald.light : PALETTE.violet.light,
+                                          color: f.type === 'INTERNE' ? PALETTE.emerald.dark : PALETTE.violet.dark,
+                                        }} />
+                                      </TableCell>
+                                      <TableCell align="center">
+                                        <Chip label={f.nbFormations} size="small" variant="outlined" sx={{ fontWeight: 700, fontSize: '0.78rem', color: PALETTE.indigo.main, borderColor: PALETTE.indigo.muted }} />
+                                      </TableCell>
+                                      <TableCell align="center">
+                                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A' }}>
+                                          {f.noteMoyenne ? `${Number(f.noteMoyenne).toFixed(1)}/20` : '—'}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell align="center">
+                                        {notePct && (
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.4 }}>
+                                              <Chip label={`${notePct}%`} size="small" sx={{
+                                                height: 20, fontSize: '0.72rem', fontWeight: 800,
+                                                bgcolor: notePct >= 80 ? '#DCFCE7' : notePct >= 65 ? '#FEF3C7' : '#FEE2E2',
+                                                color: notePct >= 80 ? '#14532D' : notePct >= 65 ? '#78350F' : '#7F1D1D',
+                                              }} />
+                                              <Box sx={{ width: 60, height: 4, bgcolor: '#F1F5F9', borderRadius: 2, overflow: 'hidden' }}>
+                                                <Box sx={{ height: '100%', width: `${notePct}%`, bgcolor: notePct >= 80 ? PALETTE.emerald.main : notePct >= 65 ? PALETTE.amber.main : PALETTE.rose.main, borderRadius: 2 }} />
+                                              </Box>
+                                            </Box>
+                                        )}
+                                      </TableCell>
+                                      <TableCell align="center">
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                                          <Star sx={{ fontSize: 14, color: PALETTE.amber.main }} />
+                                          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>
+                                            {f.satisfaction?.toFixed(1)}
+                                          </Typography>
+                                        </Box>
+                                      </TableCell>
+                                    </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
 
-                {/* Évolution budget sur 5 ans */}
-                <Grid item xs={12}>
-                  <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
-                    <CardContent>
-                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 0.5 }}>
-                        Évolution du budget sur {availableYears.length} ans
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mb: 2 }}>
-                        Tendance annuelle {availableYears[availableYears.length-1]} → {availableYears[0]}
-                      </Typography>
-                      <ResponsiveContainer width="100%" height={240}>
-                        <AreaChart data={annualEvolution} margin={{ top: 5, right: 20, bottom: 0, left: -10 }}>
-                          <defs>
-                            <linearGradient id="budgetGrad5" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%"  stopColor="#6366F1" stopOpacity={0.2} />
-                              <stop offset="95%" stopColor="#6366F1" stopOpacity={0.02} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                          <XAxis dataKey="year" tick={{ fontSize: 12, fill: '#475569', fontWeight: 600 }} axisLine={false} />
-                          <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Area type="monotone" dataKey="budget" name="Budget (DT)"
-                                stroke="#6366F1" fill="url(#budgetGrad5)" strokeWidth={3}
-                                dot={{ fill: '#6366F1', r: 6, strokeWidth: 2, stroke: '#fff' }}
-                                activeDot={{ r: 8 }} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
+                  <Grid item xs={12} md={4}>
+                    <Grid container spacing={2.5} sx={{ height: '100%' }}>
+                      {/* Taux présence gauge */}
+                      <Grid item xs={12}>
+                        <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                          <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 2 }}>Taux de présence</Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                              <CircularGauge
+                                  value={stats.tauxPresence || 0}
+                                  max={100}
+                                  label="des inscrits"
+                                  color={PALETTE.emerald.main}
+                                  size={150}
+                              />
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
+                              {[
+                                { label: 'Internes', value: stats.formateursInternes || 0, color: PALETTE.emerald.main },
+                                { label: 'Externes', value: stats.formateursExternes || 0, color: PALETTE.violet.main },
+                              ].map((item, i) => (
+                                  <Box key={i} sx={{ textAlign: 'center', p: 1.5, borderRadius: 2, border: `1px solid ${item.color}30`, bgcolor: item.color + '08', flex: 1 }}>
+                                    <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', color: item.color }}>{item.value}</Typography>
+                                    <Typography sx={{ fontSize: '0.72rem', color: '#64748B' }}>{item.label}</Typography>
+                                  </Box>
+                              ))}
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+
+                      {/* Radar notes par domaine */}
+                      <Grid item xs={12}>
+                        <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                          <CardContent sx={{ p: 3 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: '#0F172A', mb: 1 }}>Radar notes / domaine</Typography>
+                            <ResponsiveContainer width="100%" height={200}>
+                              <RadarChart data={(stats.notesMoyennesParDomaine || []).map(d => ({
+                                domaine: d.domaine.substring(0, 6),
+                                note: Math.round(d.note * 10) / 10,
+                              }))}>
+                                <PolarGrid stroke="#F1F5F9" />
+                                <PolarAngleAxis dataKey="domaine" tick={{ fontSize: 10, fill: '#64748B' }} />
+                                <PolarRadiusAxis angle={30} domain={[0, 20]} tick={{ fontSize: 9, fill: '#94A3B8' }} tickCount={3} />
+                                <Radar name="Notes" dataKey="note" stroke={PALETTE.indigo.main} fill={PALETTE.indigo.main} fillOpacity={0.2} strokeWidth={2} />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    </Grid>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </motion.div>
-        )}
+            )}
+
+            {/* ════════════════════════════════════════════════
+              TAB 5 : BUDGET
+          ════════════════════════════════════════════════ */}
+            {activeTab === 5 && (
+                <Grid container spacing={2.5}>
+                  {/* KPI budget */}
+                  <Grid item xs={12}>
+                    <Grid container spacing={2}>
+                      {[
+                        { label: 'Budget total réalisé', value: `${(stats.budgetTotal||0).toLocaleString()} DT`, color: PALETTE.indigo.main, bg: PALETTE.indigo.light, icon: AttachMoney },
+                        { label: 'Budget moyen / formation', value: stats.totalFormations > 0 ? `${Math.round((stats.budgetTotal||0) / stats.totalFormations).toLocaleString()} DT` : '—', color: PALETTE.emerald.main, bg: PALETTE.emerald.light, icon: School },
+                        { label: 'Objectif annuel', value: '100 000 DT', color: PALETTE.amber.main, bg: PALETTE.amber.light, icon: Assessment },
+                        { label: 'Taux réalisation', value: `${Math.round((stats.budgetTotal||0) / 100000 * 100)}%`, color: (stats.budgetTotal||0) >= 100000 ? PALETTE.emerald.main : PALETTE.rose.main, bg: (stats.budgetTotal||0) >= 100000 ? PALETTE.emerald.light : PALETTE.rose.light, icon: TrendingUp },
+                      ].map((item, i) => (
+                          <Grid item xs={6} md={3} key={i}>
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+                              <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                                <CardContent sx={{ p: 2.5 }}>
+                                  <Box sx={{ p: 1, borderRadius: 2, bgcolor: item.bg, display: 'inline-flex', mb: 1.5 }}>
+                                    <item.icon sx={{ color: item.color, fontSize: 20 }} />
+                                  </Box>
+                                  <Typography sx={{ fontWeight: 800, fontSize: '1.3rem', color: item.color, lineHeight: 1.2 }}>{item.value}</Typography>
+                                  <Typography sx={{ fontSize: '0.78rem', color: '#64748B', mt: 0.4 }}>{item.label}</Typography>
+                                </CardContent>
+                              </Card>
+                            </motion.div>
+                          </Grid>
+                      ))}
+                    </Grid>
+                  </Grid>
+
+                  {/* Budget trimestriel */}
+                  <Grid item xs={12} md={7}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 0.5 }}>Budget trimestriel — Réel vs Objectif</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mb: 2 }}>{primaryYear}</Typography>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <BarChart data={stats.budgetParTrimestre || []} barSize={30}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                            <XAxis dataKey="trimestre" tick={{ fontSize: 12, fill: '#94A3B8' }} axisLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                            <Tooltip content={<DarkTooltip />} />
+                            <Bar dataKey="budget"   name="Budget réel" fill={PALETTE.indigo.main} radius={[5, 5, 0, 0]} />
+                            <Bar dataKey="objectif" name="Objectif"    fill="#E2E8F0"             radius={[5, 5, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                        <Box sx={{ display: 'flex', gap: 2, mt: 1.5, justifyContent: 'center' }}>
+                          {[{ color: PALETTE.indigo.main, label: 'Budget réel' }, { color: '#CBD5E1', label: 'Objectif' }].map((item, i) => (
+                              <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                <Box sx={{ width: 10, height: 10, borderRadius: 1, bgcolor: item.color }} />
+                                <Typography sx={{ fontSize: '0.78rem', color: '#64748B' }}>{item.label}</Typography>
+                              </Box>
+                          ))}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  {/* Évolution budget 5 ans */}
+                  <Grid item xs={12} md={5}>
+                    <Card sx={{ border: '1px solid #E2E8F0', borderRadius: 3, boxShadow: 'none', height: '100%' }}>
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', mb: 0.5 }}>Évolution budget — {availableYears.length} ans</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', mb: 2 }}>{availableYears[availableYears.length-1]}→{availableYears[0]}</Typography>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <AreaChart data={annualTrend} margin={{ top: 5, right: 10, bottom: 0, left: -15 }}>
+                            <defs>
+                              <linearGradient id="budG" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%"  stopColor={PALETTE.indigo.main} stopOpacity={0.18} />
+                                <stop offset="95%" stopColor={PALETTE.indigo.main} stopOpacity={0.01} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                            <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#475569', fontWeight: 700 }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                            <Tooltip content={<DarkTooltip />} />
+                            <Area type="monotone" dataKey="budget" name="Budget (DT)"
+                                  stroke={PALETTE.indigo.main} fill="url(#budG)" strokeWidth={3}
+                                  dot={{ fill: PALETTE.indigo.main, r: 6, strokeWidth: 2, stroke: '#fff' }}
+                                  activeDot={{ r: 8 }}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+            )}
+
+          </motion.div>
+        </AnimatePresence>
       </Box>
   );
 }
