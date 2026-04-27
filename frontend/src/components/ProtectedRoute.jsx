@@ -10,11 +10,8 @@ const ProtectedRoute = ({ allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    // Admin a toujours accès
     if (user?.role === 'ROLE_ADMIN') return <Outlet />;
-    // Responsable redirigé vers stats
     if (user?.role === 'ROLE_RESPONSABLE') return <Navigate to="/stats" replace />;
-    // Autres redirigés vers dashboard
     return <Navigate to="/dashboard" replace />;
   }
 

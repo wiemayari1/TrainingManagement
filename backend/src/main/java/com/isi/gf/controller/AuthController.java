@@ -53,10 +53,10 @@ public class AuthController {
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getUsername(),
-                            loginRequest.getPassword()
-                    )
+                new UsernamePasswordAuthenticationToken(
+                    loginRequest.getUsername(),
+                    loginRequest.getPassword()
+                )
             );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -66,16 +66,16 @@ public class AuthController {
             String role = userDetails.getAuthorities().iterator().next().getAuthority();
 
             return ResponseEntity.ok(new JwtResponse(
-                    jwt,
-                    userDetails.getId(),
-                    userDetails.getUsername(),
-                    userDetails.getEmail(),
-                    role,
-                    userDetails.getFirstLogin()
+                jwt,
+                userDetails.getId(),
+                userDetails.getUsername(),
+                userDetails.getEmail(),
+                role,
+                userDetails.getFirstLogin()
             ));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(
-                    new MessageResponse("Identifiants incorrects", false)
+                new MessageResponse("Identifiants incorrects", false)
             );
         }
     }
@@ -83,14 +83,23 @@ public class AuthController {
     // ── REGISTER ───────────────────────────────────────────────────────────
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody User signUpRequest) {
+        if (signUpRequest.getUsername() == null || signUpRequest.getUsername().isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(new MessageResponse("Erreur: Le username est obligatoire!", false));
+        }
+        if (signUpRequest.getPassword() == null || signUpRequest.getPassword().length() < 6) {
+            return ResponseEntity.badRequest()
+                .body(new MessageResponse("Erreur: Le mot de passe doit contenir au moins 6 caractères!", false));
+        }
+
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Erreur: Ce username est déjà utilisé!", false));
+                .body(new MessageResponse("Erreur: Ce username est déjà utilisé!", false));
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Erreur: Cet email est déjà utilisé!", false));
+                .body(new MessageResponse("Erreur: Cet email est déjà utilisé!", false));
         }
 
         User user = new User();
@@ -110,35 +119,31 @@ public class AuthController {
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         if (request.getEmail() == null || request.getEmail().isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Veuillez entrer votre email.", false));
+                .body(new MessageResponse("Veuillez entrer votre email.", false));
         }
 
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
-        // Toujours retourner succès pour ne pas révéler si l'email existe
         if (user == null) {
             return ResponseEntity.ok(new MessageResponse(
-                    "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
+                "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
         }
 
-        // Supprimer l'ancien token s'il existe
         tokenRepository.deleteByUserId(user.getId());
 
-        // Créer un nouveau token
         String token = UUID.randomUUID().toString();
-        PasswordResetToken resetToken = new PasswordResetToken(token, user, 60); // 60 minutes
+        PasswordResetToken resetToken = new PasswordResetToken(token, user, 60);
         tokenRepository.save(resetToken);
 
-        // Envoyer l'email
         try {
             emailService.sendPasswordResetEmail(user.getEmail(), token);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(
-                    new MessageResponse("Erreur lors de l'envoi de l'email. Réessayez plus tard.", false));
+                new MessageResponse("Erreur lors de l'envoi de l'email. Réessayez plus tard.", false));
         }
 
         return ResponseEntity.ok(new MessageResponse(
-                "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
+            "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
     }
 
     // ── VERIFY RESET TOKEN ─────────────────────────────────────────────────
@@ -146,14 +151,14 @@ public class AuthController {
     public ResponseEntity<?> verifyResetToken(@RequestParam String token) {
         if (token == null || token.isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Token manquant.", false));
+                .body(new MessageResponse("Token manquant.", false));
         }
 
         PasswordResetToken resetToken = tokenRepository.findByToken(token).orElse(null);
 
         if (resetToken == null || resetToken.isExpired() || resetToken.isUsed()) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Ce lien est invalide ou a expiré.", false));
+                .body(new MessageResponse("Ce lien est invalide ou a expiré.", false));
         }
 
         return ResponseEntity.ok(new MessageResponse("Token valide.", true));
@@ -164,19 +169,19 @@ public class AuthController {
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         if (request.getToken() == null || request.getToken().isBlank()) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Token manquant.", false));
+                .body(new MessageResponse("Token manquant.", false));
         }
 
         if (request.getPassword() == null || request.getPassword().length() < 6) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Le mot de passe doit contenir au moins 6 caractères.", false));
+                .body(new MessageResponse("Le mot de passe doit contenir au moins 6 caractères.", false));
         }
 
         PasswordResetToken resetToken = tokenRepository.findByToken(request.getToken()).orElse(null);
 
         if (resetToken == null || resetToken.isExpired() || resetToken.isUsed()) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Ce lien est invalide ou a expiré.", false));
+                .body(new MessageResponse("Ce lien est invalide ou a expiré.", false));
         }
 
         User user = resetToken.getUser();
@@ -188,7 +193,7 @@ public class AuthController {
         tokenRepository.save(resetToken);
 
         return ResponseEntity.ok(new MessageResponse(
-                "Mot de passe réinitialisé avec succès.", true));
+            "Mot de passe réinitialisé avec succès.", true));
     }
 
     // ── CHANGE PASSWORD ────────────────────────────────────────────────────
@@ -217,12 +222,12 @@ public class AuthController {
 
         if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
             return ResponseEntity.badRequest().body(
-                    new MessageResponse("Le nouveau mot de passe doit contenir au moins 6 caractères", false));
+                new MessageResponse("Le nouveau mot de passe doit contenir au moins 6 caractères", false));
         }
 
         if (request.getNewPassword().equals(request.getOldPassword()) && !Boolean.TRUE.equals(user.getFirstLogin())) {
             return ResponseEntity.badRequest().body(
-                    new MessageResponse("Le nouveau mot de passe doit être différent de l'ancien", false));
+                new MessageResponse("Le nouveau mot de passe doit être différent de l'ancien", false));
         }
 
         user.setPassword(encoder.encode(request.getNewPassword()));

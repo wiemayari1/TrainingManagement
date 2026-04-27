@@ -32,49 +32,49 @@ public class JwtUtils {
         UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
 
         return Jwts.builder()
-                .subject(userPrincipal.getUsername())
-                .claim("id", userPrincipal.getId())
-                .claim("email", userPrincipal.getEmail())
-                .claim("roles", userPrincipal.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
-                        .collect(Collectors.toList()))
-                .issuedAt(new Date())
-                .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(getSigningKey())
-                .compact();
+            .subject(userPrincipal.getUsername())
+            .claim("id", userPrincipal.getId())
+            .claim("email", userPrincipal.getEmail())
+            .claim("roles", userPrincipal.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList()))
+            .issuedAt(new Date())
+            .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
+            .signWith(getSigningKey())
+            .compact();
     }
 
     public String getUsernameFromToken(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+            .verifyWith(getSigningKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload()
+            .getSubject();
     }
 
-    /**
-     * Extrait le premier rôle du token JWT
-     * Retourne ROLE_USER, ROLE_RESPONSABLE ou ROLE_ADMIN
-     */
     public String getRoleFromToken(String token) {
         Claims claims = Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-        
-        @SuppressWarnings("unchecked")
-        List<String> roles = claims.get("roles", List.class);
-        return roles != null && !roles.isEmpty() ? roles.get(0) : "ROLE_USER";
+            .verifyWith(getSigningKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload();
+
+        Object rolesObj = claims.get("roles");
+        if (rolesObj instanceof List<?> roles) {
+            if (!roles.isEmpty() && roles.get(0) instanceof String) {
+                return (String) roles.get(0);
+            }
+        }
+        return "ROLE_USER";
     }
 
     public boolean validateToken(String authToken) {
         try {
             Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(authToken);
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(authToken);
             return true;
         } catch (SecurityException e) {
             System.err.println("Invalid JWT signature: " + e.getMessage());
@@ -92,9 +92,9 @@ public class JwtUtils {
 
     public Claims getAllClaimsFromToken(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+            .verifyWith(getSigningKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload();
     }
 }

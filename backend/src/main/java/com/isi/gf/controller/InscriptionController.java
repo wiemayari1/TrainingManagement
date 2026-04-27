@@ -48,6 +48,17 @@ public class InscriptionController {
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody Inscription inscription) {
         if (!repo.existsById(id)) return ResponseEntity.notFound().build();
+
+        var existing = repo.findById(id).get();
+        Long newFormId = inscription.getFormation().getId();
+        Long newPartId = inscription.getParticipant().getId();
+
+        if ((!existing.getFormation().getId().equals(newFormId) || !existing.getParticipant().getId().equals(newPartId))
+            && repo.existsByFormationIdAndParticipantId(newFormId, newPartId)) {
+            return ResponseEntity.badRequest()
+                .body(new MessageResponse("Ce participant est déjà inscrit à cette formation", false));
+        }
+
         inscription.setId(id);
         repo.save(inscription);
         return ResponseEntity.ok(new MessageResponse("Inscription mise à jour", true));

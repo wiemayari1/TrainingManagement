@@ -31,7 +31,7 @@ public class AdminController {
 
     @GetMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<User> getUserById(@PathVariable Integer id) {
+    public ResponseEntity<?> getUserById(@PathVariable Integer id) {
         return userRepo.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
@@ -39,9 +39,9 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createUser(@RequestBody CreateUserRequest req) {
         if (userRepo.existsByUsername(req.getUsername()))
-            return ResponseEntity.badRequest().body(new MessageResponse("Username deja utilise", false));
+            return ResponseEntity.badRequest().body(new MessageResponse("Username déjà utilisé", false));
         if (req.getEmail() != null && !req.getEmail().isBlank() && userRepo.existsByEmail(req.getEmail()))
-            return ResponseEntity.badRequest().body(new MessageResponse("Email deja utilise", false));
+            return ResponseEntity.badRequest().body(new MessageResponse("Email déjà utilisé", false));
 
         String roleName = req.getRole() != null ? req.getRole() : "ROLE_USER";
         Role role = roleRepo.findByNom(roleName)
@@ -59,15 +59,21 @@ public class AdminController {
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setRole(role);
+        user.setFirstLogin(true);
         User saved = userRepo.save(user);
 
         if (saved.getEmail() != null && !saved.getEmail().isBlank()) {
-            emailService.sendCredentialsEmail(saved.getEmail(), saved.getUsername(), rawPassword, role.getNom());
+            try {
+                emailService.sendCredentialsEmail(saved.getEmail(), saved.getUsername(), rawPassword, role.getNom());
+            } catch (Exception e) {
+                // Log mais ne pas échouer la création
+                System.err.println("Erreur envoi email: " + e.getMessage());
+            }
         }
 
-        String msg = generated 
-            ? "Utilisateur cree avec succes. Un email avec le mot de passe a ete envoye." 
-            : "Utilisateur cree avec succes.";
+        String msg = generated
+            ? "Utilisateur créé avec succès. Un email avec le mot de passe a été envoyé."
+            : "Utilisateur créé avec succès.";
         return ResponseEntity.ok(new MessageResponse(msg, true));
     }
 
@@ -75,6 +81,17 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateUser(@PathVariable Integer id, @RequestBody CreateUserRequest req) {
         return userRepo.findById(id).map(u -> {
+            if (!u.getUsername().equals(req.getUsername()) && userRepo.existsByUsername(req.getUsername())) {
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Username déjà utilisé", false));
+            }
+            if (req.getEmail() != null && !req.getEmail().isBlank()
+                && !req.getEmail().equals(u.getEmail())
+                && userRepo.existsByEmail(req.getEmail())) {
+                return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Email déjà utilisé", false));
+            }
+
             u.setUsername(req.getUsername());
             u.setEmail(req.getEmail());
             if (req.getRole() != null)
@@ -90,7 +107,7 @@ public class AdminController {
     public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
         if (!userRepo.existsById(id)) return ResponseEntity.notFound().build();
         userRepo.deleteById(id);
-        return ResponseEntity.ok(new MessageResponse("Utilisateur supprime", true));
+        return ResponseEntity.ok(new MessageResponse("Utilisateur supprimé", true));
     }
 
     @GetMapping("/roles")
