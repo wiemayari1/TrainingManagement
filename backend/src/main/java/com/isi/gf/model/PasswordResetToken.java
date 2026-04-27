@@ -2,7 +2,7 @@ package com.isi.gf.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -40,5 +40,9 @@ public class PasswordResetToken {
 
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(this.expiryDate);
+    }
+
+    public boolean isValid() {
+        return !isExpired() && !used;
     }
 }

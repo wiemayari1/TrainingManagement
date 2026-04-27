@@ -19,21 +19,22 @@ public class UserDetailsImpl implements UserDetails {
     private String email;
     @JsonIgnore
     private String password;
+    private Boolean firstLogin;
     private Collection<? extends GrantedAuthority> authorities;
 
     public UserDetailsImpl(Integer id, String username, String email, String password,
-                           Collection<? extends GrantedAuthority> authorities) {
+                           Boolean firstLogin, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
+        this.firstLogin = firstLogin;
         this.authorities = authorities;
     }
 
     public static UserDetailsImpl build(User user) {
-        // getRole() retourne déjà le nom du rôle (String)
         List<GrantedAuthority> authorities = Collections.singletonList(
-            new SimpleGrantedAuthority(user.getRole())
+                new SimpleGrantedAuthority(user.getRole())
         );
 
         return new UserDetailsImpl(
@@ -41,6 +42,7 @@ public class UserDetailsImpl implements UserDetails {
                 user.getUsername(),
                 user.getEmail(),
                 user.getPassword(),
+                user.getFirstLogin(),
                 authorities);
     }
 
@@ -55,6 +57,10 @@ public class UserDetailsImpl implements UserDetails {
 
     public String getEmail() {
         return email;
+    }
+
+    public Boolean getFirstLogin() {
+        return firstLogin;
     }
 
     @Override
