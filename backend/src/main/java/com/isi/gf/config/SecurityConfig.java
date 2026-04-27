@@ -57,10 +57,19 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/register", "/auth/forgot-password", "/auth/reset-password/**").permitAll()
+                        // Endpoints publics — login, register, reset password
+                        .requestMatchers(
+                                "/auth/login",
+                                "/auth/register",
+                                "/auth/forgot-password",
+                                "/auth/reset-password",
+                                "/auth/reset-password/verify"
+                        ).permitAll()
                         .requestMatchers("/public/**").permitAll()
+                        // Routes protégées par rôle
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/stats/**").hasAnyRole("RESPONSABLE", "ADMIN")
+                        // Tout le reste nécessite authentification
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

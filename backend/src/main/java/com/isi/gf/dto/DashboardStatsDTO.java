@@ -4,11 +4,6 @@ import lombok.Data;
 import java.util.List;
 import java.util.Map;
 
-/**
- * DTO enrichi pour les statistiques du dashboard.
- * Champs ajoutés pour répondre aux exigences du prof :
- * "indicateurs permettant de suivre et évaluer l'activité du centre"
- */
 @Data
 public class DashboardStatsDTO {
     // KPIs principaux
@@ -19,16 +14,21 @@ public class DashboardStatsDTO {
     private Double tauxPresence;
     private Double satisfactionMoyenne;
 
+    // Note moyenne globale (calculée depuis les inscriptions)
+    private Double noteMoyenneGlobale;
+
     // Formateurs internes vs externes
     private Integer formateursInternes;
     private Integer formateursExternes;
 
     // Graphiques
-    private List<Map<String, Object>> formationsParDomaine;   // BarChart + PieChart
-    private List<Map<String, Object>> evolutionMensuelle;     // AreaChart (courbe)
-    private List<Map<String, Object>> formationsParStatut;    // Donut chart
-    private List<Map<String, Object>> budgetParTrimestre;     // BarChart groupé
-    private List<Map<String, Object>> topFormateurs;          // Tableau classement
-    private List<Map<String, Object>> topStructures;          // Barres horizontales
-    private List<Map<String, Object>> competencesRadar;       // Radar chart
+    private List<Map<String, Object>> formationsParDomaine;
+    private List<Map<String, Object>> evolutionMensuelle;
+    private List<Map<String, Object>> formationsParStatut;
+    private List<Map<String, Object>> budgetParTrimestre;
+    private List<Map<String, Object>> topFormateurs;
+    private List<Map<String, Object>> participantsParStructure;
+    private List<Map<String, Object>> notesMoyennesParDomaine;
+    private List<Map<String, Object>> topStructures;
+    private List<Map<String, Object>> competencesRadar;
 }
