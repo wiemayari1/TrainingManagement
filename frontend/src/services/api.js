@@ -22,6 +22,14 @@ api.interceptors.response.use(
       if (logoutCallback) logoutCallback();
       else window.location.href = '/login';
     }
+    // Attach a human-readable message so callers can use err.userMessage
+    if (err.response?.data?.message) {
+      err.userMessage = err.response.data.message;
+    } else if (!err.response) {
+      err.userMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion réseau.';
+    } else {
+      err.userMessage = `Erreur serveur (${err.response.status}). Réessayez plus tard.`;
+    }
     return Promise.reject(err);
   }
 );

@@ -45,4 +45,18 @@ public class PasswordResetToken {
     public boolean isValid() {
         return !isExpired() && !used;
     }
+
+    /**
+     * Marks this token as used. Throws IllegalStateException when the token
+     * is already used or has expired, preventing silent double-use.
+     */
+    public void markAsUsed() {
+        if (used) {
+            throw new IllegalStateException("Ce token a déjà été utilisé.");
+        }
+        if (isExpired()) {
+            throw new IllegalStateException("Ce token a expiré.");
+        }
+        this.used = true;
+    }
 }

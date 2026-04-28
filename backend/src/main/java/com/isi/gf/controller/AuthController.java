@@ -12,6 +12,8 @@ import com.isi.gf.repo.RoleRepo;
 import com.isi.gf.service.EmailService;
 import com.isi.gf.service.UserDetailsImpl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,7 +27,10 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
+@CrossOrigin(origins = "${app.frontend.url:http://localhost:3000}", allowCredentials = "true")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     AuthenticationManager authenticationManager;
@@ -138,6 +143,7 @@ public class AuthController {
         try {
             emailService.sendPasswordResetEmail(user.getEmail(), token);
         } catch (Exception e) {
+            log.error("Échec de l'envoi de l'email de réinitialisation à {} : {}", user.getEmail(), e.getMessage(), e);
             return ResponseEntity.status(500).body(
                 new MessageResponse("Erreur lors de l'envoi de l'email. Réessayez plus tard.", false));
         }
@@ -189,7 +195,7 @@ public class AuthController {
         user.setFirstLogin(false);
         userRepository.save(user);
 
-        resetToken.setUsed(true);
+        resetToken.markAsUsed();
         tokenRepository.save(resetToken);
 
         return ResponseEntity.ok(new MessageResponse(
@@ -235,6 +241,24 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("Mot de passe changé avec succès", true));
+    }
+
+    // ── TEST EMAIL (admin only) ────────────────────────────────────────────
+    @GetMapping("/test-email")
+    public ResponseEntity<?> testEmail(@RequestParam String to) {
+        if (to == null || to.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(new MessageResponse("Veuillez fournir une adresse email de test.", false));
+        }
+        try {
+            emailService.sendPasswordResetEmail(to, "test-token-123");
+            log.info("Email de test envoyé à {}", to);
+            return ResponseEntity.ok(new MessageResponse("Email de test envoyé à " + to, true));
+        } catch (Exception e) {
+            log.error("Échec de l'envoi de l'email de test à {} : {}", to, e.getMessage(), e);
+            return ResponseEntity.status(500)
+                .body(new MessageResponse("Échec de l'envoi : " + e.getMessage(), false));
+        }
     }
 
     // ── DTOs internes ──────────────────────────────────────────────────────
