@@ -251,7 +251,7 @@ public class AuthController {
                 .body(new MessageResponse("Veuillez fournir une adresse email de test.", false));
         }
         try {
-            emailService.sendPasswordResetEmail(to, "test-token-123");
+            emailService.sendPasswordResetEmail(to, UUID.randomUUID().toString());
             log.info("Email de test envoyé à {}", to);
             return ResponseEntity.ok(new MessageResponse("Email de test envoyé à " + to, true));
         } catch (Exception e) {

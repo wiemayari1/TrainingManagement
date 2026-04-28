@@ -16,6 +16,8 @@ public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
+    private static final String EMAIL_REGEX = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
+
     @Autowired
     private JavaMailSender mailSender;
 
@@ -26,7 +28,7 @@ public class EmailService {
         if (to == null || to.isBlank()) {
             throw new IllegalArgumentException("L'adresse email destinataire est obligatoire.");
         }
-        if (!to.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+        if (!to.matches(EMAIL_REGEX)) {
             throw new IllegalArgumentException("L'adresse email destinataire est invalide : " + to);
         }
         if (token == null || token.isBlank()) {
@@ -50,7 +52,7 @@ public class EmailService {
         if (to == null || to.isBlank()) {
             throw new IllegalArgumentException("L'adresse email destinataire est obligatoire.");
         }
-        if (!to.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+        if (!to.matches(EMAIL_REGEX)) {
             throw new IllegalArgumentException("L'adresse email destinataire est invalide : " + to);
         }
         if (username == null || username.isBlank()) {
