@@ -59,9 +59,9 @@ export function ForgotPassword() {
       const res = await api.post('/auth/forgot-password', { email });
       setStatus('success');
       setMsg(res.data.message || 'Si cet email existe, vous recevrez un lien de réinitialisation.');
-    } catch {
+    } catch (err) {
       setStatus('error');
-      setMsg('Erreur de connexion au serveur.');
+      setMsg(err.response?.data?.message || 'Erreur de connexion au serveur.');
     } finally {
       setLoading(false);
     }
@@ -162,9 +162,9 @@ export function ResetPassword() {
           setTokenStatus('invalid');
           setTokenMsg(res.data.message || 'Ce lien est invalide ou a expiré.');
         }
-      } catch {
+      } catch (err) {
         setTokenStatus('invalid');
-        setTokenMsg('Impossible de vérifier le lien. Vérifiez votre connexion et réessayez.');
+        setTokenMsg(err.response?.data?.message || 'Impossible de vérifier le lien. Vérifiez votre connexion et réessayez.');
       }
     };
 
@@ -188,8 +188,8 @@ export function ResetPassword() {
           setTokenMsg(res.data.message);
         }
       }
-    } catch {
-      setMsg('Erreur de connexion au serveur.');
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Erreur de connexion au serveur.');
     } finally {
       setLoading(false);
     }

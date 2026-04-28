@@ -1,5 +1,7 @@
 package com.isi.gf.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -12,14 +14,25 @@ import jakarta.mail.internet.MimeMessage;
 @Service
 public class EmailService {
 
-    @Autowired
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
+    @Autowired(required = false)
     private JavaMailSender mailSender;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
+    @Value("${app.mail.enabled:false}")
+    private boolean mailEnabled;
+
     public void sendPasswordResetEmail(String to, String token) throws MessagingException {
         String resetLink = frontendUrl + "/reset-password?token=" + token;
+
+        if (!mailEnabled || mailSender == null) {
+            log.warn("Mail is disabled. Password reset link for {}: {}", to, resetLink);
+            return;
+        }
+
         String html = buildResetEmail(resetLink);
 
         MimeMessage message = mailSender.createMimeMessage();
@@ -31,6 +44,11 @@ public class EmailService {
     }
 
     public void sendCredentialsEmail(String to, String username, String password, String role) throws MessagingException {
+        if (!mailEnabled || mailSender == null) {
+            log.warn("Mail is disabled. Skipping credentials email for {}", to);
+            return;
+        }
+
         String html = buildWelcomeEmail(username, role, password);
 
         MimeMessage message = mailSender.createMimeMessage();

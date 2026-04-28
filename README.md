@@ -1,5 +1,69 @@
 # TrainingManagement - Corrections Complètes
 
+## 🚀 Démarrage rapide (Password Reset local)
+
+### Prérequis
+- Java 17+, Maven 3.8+
+- Node.js 18+, npm
+- MySQL 8+
+
+### 1. Initialiser la base de données
+```bash
+mysql -u root -p < db/init.sql
+```
+
+### 2. Lancer le backend
+```bash
+cd backend
+mvn spring-boot:run
+```
+Le backend démarre sur **http://localhost:8081/api**.
+
+> **Mail désactivé par défaut** (`app.mail.enabled=false`). Le lien de réinitialisation s'affiche dans les logs backend :
+> `WARN  c.i.g.s.EmailService - Mail is disabled. Password reset link for <email>: http://localhost:3000/reset-password?token=<token>`
+> Copiez ce lien dans le navigateur pour tester le reset.
+
+#### Activer l'envoi d'email réel (optionnel)
+Définissez ces variables d'environnement avant de lancer le backend :
+```bash
+export MAIL_ENABLED=true
+export MAIL_HOST=sandbox.smtp.mailtrap.io   # ou votre serveur SMTP
+export MAIL_PORT=587
+export MAIL_USERNAME=<votre_username>
+export MAIL_PASSWORD=<votre_password>
+```
+
+### 3. Lancer le frontend
+```bash
+cd frontend
+cp .env.example .env   # Facultatif — la valeur par défaut est déjà correcte
+npm install
+npm start
+```
+Le frontend démarre sur **http://localhost:3000**.
+
+### 4. Tester le password reset
+1. Accédez à `http://localhost:3000/forgot-password`
+2. Entrez un email existant (ex: `admin@excellent-training.tn`)
+3. Regardez les logs backend pour le lien de reset (si `MAIL_ENABLED=false`)
+4. Ouvrez le lien → entrez un nouveau mot de passe → validez
+
+### Variables d'environnement résumé
+| Variable | Défaut | Description |
+|----------|--------|-------------|
+| `REACT_APP_API_URL` | `http://localhost:8081/api` | URL de base du backend (frontend) |
+| `MYSQL_USER` | `root` | Utilisateur MySQL |
+| `MYSQL_PASSWORD` | `root123` | Mot de passe MySQL |
+| `MAIL_ENABLED` | `false` | Activer l'envoi d'emails |
+| `MAIL_HOST` | `sandbox.smtp.mailtrap.io` | Serveur SMTP |
+| `MAIL_PORT` | `587` | Port SMTP |
+| `MAIL_USERNAME` | _(vide)_ | Login SMTP |
+| `MAIL_PASSWORD` | _(vide)_ | Mot de passe SMTP |
+| `FRONTEND_URL` | `http://localhost:3000` | URL frontend (pour les liens email) |
+| `JWT_SECRET` | _(clé par défaut)_ | Clé secrète JWT |
+
+---
+
 ## 🔴 PROBLÈME CRITIQUE : "Identifiants incorrects mais il existe déjà"
 
 ### Cause
