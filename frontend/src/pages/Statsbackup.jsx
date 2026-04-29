@@ -3,7 +3,7 @@ import {
     Box, Grid, Card, CardContent, Typography, FormControl,
     Select, MenuItem, LinearProgress, Chip, Avatar,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Tabs, Tab, ToggleButton, ToggleButtonGroup,
+    Tabs, Tab, ToggleButton, ToggleButtonGroup, Divider,
 } from '@mui/material';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -16,13 +16,15 @@ import { statsService } from '../services/api';
 import {
     School, People, Person, AttachMoney, TrendingUp, TrendingDown,
     CheckCircle, Assessment, Star, AutoGraph, CompareArrows, ShowChart,
-    Groups, Badge,
+    CalendarMonth, DonutLarge, BarChart as BarChartIcon,
 } from '@mui/icons-material';
 
+// ── Années disponibles ────────────────────────────────────────────────────────
 const ALL_YEARS = [2022, 2023, 2024, 2025, 2026];
 const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const DOMAINES = ['Informatique','Management','Finance','Langues','Juridique','Marketing'];
 
+// ── Palette ───────────────────────────────────────────────────────────────────
 const PALETTE = {
     indigo:  { main: '#6366F1', light: '#EEF2FF', dark: '#4338CA', muted: '#A5B4FC' },
     emerald: { main: '#10B981', light: '#ECFDF5', dark: '#047857', muted: '#6EE7B7' },
@@ -35,6 +37,7 @@ const YEAR_COLORS = ['#6366F1','#10B981','#F59E0B','#F43F5E','#06B6D4'];
 const DOMAIN_COLORS = ['#6366F1','#10B981','#F59E0B','#F43F5E','#06B6D4','#8B5CF6'];
 const DASH_STYLES = [undefined,[6,3],[4,2],[8,3],[3,3]];
 
+// ── Générateur de données démo ────────────────────────────────────────────────
 function seededRng(seed) {
     let s = Math.abs(seed) % 2147483647 || 1;
     return () => { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; };
@@ -44,7 +47,6 @@ function generateDemoData(year) {
     const r = seededRng(year * 179 + 13);
     const base = year - 2022;
     const gr = 1 + base * 0.14;
-
     const formations = Math.round(14 * gr) + Math.floor(r() * 4);
     const participants = Math.round(160 * gr) + Math.floor(r() * 22) - 5;
     const formateurs = Math.round(10 * gr) + Math.floor(r() * 3);
@@ -80,25 +82,20 @@ function generateDemoData(year) {
         { name: 'Annulées',   value: Math.round(formations * 0.08), color: PALETTE.rose.main },
     ];
 
-    // Stats formateurs sans classement
-    const formateursInternes = Math.round(formateurs * 0.56);
-    const formateursExternes = Math.round(formateurs * 0.44);
-
-    const formateursParDomaine = DOMAINES.map((name, i) => ({
-        name,
-        internes: Math.max(0, Math.round(formateursInternes / DOMAINES.length * (0.5 + r() * 1.0))),
-        externes: Math.max(0, Math.round(formateursExternes / DOMAINES.length * (0.5 + r() * 1.0))),
-    }));
-
-    const tauxOccupationFormateurs = Math.round(65 + base * 3 + r() * 15);
-    const ancienneteMoyenne = +(2.5 + base * 0.4 + r() * 1.5).toFixed(1);
+    const topFormateurs = [
+        { nom: 'Ahmed Ben Ali',  type: 'INTERNE', nbFormations: Math.round(4.5 * (1 + base * 0.14)), noteMoyenne: Math.min(19.5, +(15.0 + base * 0.25).toFixed(1)) },
+        { nom: 'Karim Mrabet',   type: 'INTERNE', nbFormations: Math.round(3.8 * (1 + base * 0.13)), noteMoyenne: Math.min(19.5, +(14.6 + base * 0.22).toFixed(1)) },
+        { nom: 'Sarra Trabelsi', type: 'EXTERNE', nbFormations: Math.round(3.2 * (1 + base * 0.12)), noteMoyenne: Math.min(19.5, +(14.3 + base * 0.20).toFixed(1)) },
+        { nom: 'Rania Gharbi',   type: 'EXTERNE', nbFormations: Math.round(2.8 * (1 + base * 0.11)), noteMoyenne: Math.min(19.5, +(13.9 + base * 0.18).toFixed(1)) },
+        { nom: 'Nour Chaabane',  type: 'INTERNE', nbFormations: Math.round(2.2 * (1 + base * 0.10)), noteMoyenne: Math.min(19.5, +(13.5 + base * 0.16).toFixed(1)) },
+    ];
 
     const participantsParStructure = [
-        { name: 'Dir. IT',         participants: Math.round(78 * (1 + base * 0.14)) },
+        { name: 'Dir. IT',        participants: Math.round(78 * (1 + base * 0.14)) },
         { name: 'Dir. Financière', participants: Math.round(55 * (1 + base * 0.14)) },
-        { name: 'Dir. Nord',       participants: Math.round(40 * (1 + base * 0.13)) },
-        { name: 'Dir. RH',         participants: Math.round(36 * (1 + base * 0.12)) },
-        { name: 'Dir. Sud',        participants: Math.round(29 * (1 + base * 0.11)) },
+        { name: 'Dir. Nord',      participants: Math.round(40 * (1 + base * 0.13)) },
+        { name: 'Dir. RH',        participants: Math.round(36 * (1 + base * 0.12)) },
+        { name: 'Dir. Sud',       participants: Math.round(29 * (1 + base * 0.11)) },
     ];
 
     const budgetParTrimestre = [
@@ -115,20 +112,19 @@ function generateDemoData(year) {
         budgetTotal: budget,
         tauxPresence,
         noteMoyenneGlobale,
-        formateursInternes,
-        formateursExternes,
-        formateursParDomaine,
-        tauxOccupationFormateurs,
-        ancienneteMoyenne,
+        formateursInternes: Math.round(formateurs * 0.56),
+        formateursExternes: Math.round(formateurs * 0.44),
         notesMoyennesParDomaine: domNotes,
         evolutionMensuelle,
         formationsParDomaine,
         formationsParStatut,
+        topFormateurs,
         participantsParStructure,
         budgetParTrimestre,
     };
 }
 
+// ── Tooltip sombre ────────────────────────────────────────────────────────────
 const DarkTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
@@ -153,6 +149,7 @@ const DarkTooltip = ({ active, payload, label }) => {
     );
 };
 
+// ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ icon, title, value, color, bg, sub, trend, delay = 0 }) {
     const Icon = icon;
     const isUp = trend && !String(trend).startsWith('-');
@@ -208,6 +205,7 @@ function KpiCard({ icon, title, value, color, bg, sub, trend, delay = 0 }) {
     );
 }
 
+// ── Barre note ────────────────────────────────────────────────────────────────
 function NoteBar({ domaine, note, pourcentage, color, index }) {
     return (
         <motion.div initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }} transition={{ delay: index * 0.07 }}>
@@ -249,6 +247,7 @@ function NoteBar({ domaine, note, pourcentage, color, index }) {
     );
 }
 
+// ── Tableau comparatif ────────────────────────────────────────────────────────
 function CompareTable({ allStats, mainYear }) {
     const indicators = [
         { label:'Formations',      key:'totalFormations',    fmt: v => v },
@@ -332,6 +331,9 @@ function CompareTable({ allStats, mainYear }) {
     );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPOSANT PRINCIPAL
+// ══════════════════════════════════════════════════════════════════════════════
 export default function Stats() {
     const [primaryYear, setPrimaryYear] = useState(2026);
     const [compareYears, setCompareYears] = useState([2026, 2025, 2024]);
@@ -383,6 +385,7 @@ export default function Stats() {
 
     const activeYears = [primaryYear, ...compareYears].filter((v, i, a) => a.indexOf(v) === i).sort();
 
+    // Données mensuelles multi-années
     const monthlyComparison = MONTHS.map((mois, i) => {
         const row = { mois };
         activeYears.forEach(year => {
@@ -393,6 +396,7 @@ export default function Stats() {
         return row;
     });
 
+    // Tendance annuelle
     const annualTrend = ALL_YEARS.map(year => {
         const d = allStats[year] || generateDemoData(year);
         return {
@@ -405,6 +409,7 @@ export default function Stats() {
         };
     });
 
+    // Notes par domaine multi-années
     const notesComparisonData = DOMAINES.map((domaine, i) => {
         const row = { domaine: domaine.substring(0, 8) };
         activeYears.forEach(year => {
@@ -421,13 +426,12 @@ export default function Stats() {
         { label:'Comparaison multi-années',  icon: CompareArrows },
         { label:'Notes & Résultats',         icon: Assessment },
         { label:'Budget',                    icon: AttachMoney },
-        { label:'Formateurs',                icon: Groups },
     ];
 
     return (
         <Box sx={{ p:{ xs:2, md:3 }, bgcolor:'#F8FAFC', minHeight:'100vh' }}>
 
-            {/* HEADER */}
+            {/* ── HEADER ─────────────────────────────────────────────────── */}
             <motion.div initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }} transition={{ duration:.5 }}>
                 <Box sx={{
                     mb:3, p:{ xs:2.5, md:3.5 }, borderRadius:3,
@@ -435,9 +439,12 @@ export default function Stats() {
                     position:'relative', overflow:'hidden',
                     boxShadow:'0 20px 50px rgba(99,102,241,0.2)',
                 }}>
+                    {/* Glows décoratifs */}
                     <Box sx={{ position:'absolute', top:-60, right:-40, width:280, height:280, borderRadius:'50%', bgcolor:'rgba(99,102,241,.18)', filter:'blur(60px)' }} />
                     <Box sx={{ position:'absolute', bottom:-40, left:'20%', width:200, height:200, borderRadius:'50%', bgcolor:'rgba(139,92,246,.12)', filter:'blur(50px)' }} />
                     <Box sx={{ position:'absolute', top:'30%', left:-30, width:120, height:120, borderRadius:'50%', bgcolor:'rgba(168,85,247,.1)', filter:'blur(40px)' }} />
+
+                    {/* Lignes décoratives */}
                     <Box sx={{ position:'absolute', top:0, left:0, right:0, height:'1px', bgcolor:'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)' }} />
 
                     <Box sx={{ position:'relative', zIndex:1, display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:2 }}>
@@ -506,7 +513,7 @@ export default function Stats() {
 
             {loading && <LinearProgress sx={{ mb:2, borderRadius:1, bgcolor:'#EEF2FF', '& .MuiLinearProgress-bar': { bgcolor:'#6366F1' } }} />}
 
-            {/* KPI CARDS */}
+            {/* ── KPI CARDS ──────────────────────────────────────────────── */}
             <Grid container spacing={2} sx={{ mb:3 }}>
                 {[
                     { icon:School,      title:'Formations',    value:stats.totalFormations||0,   color:PALETTE.indigo.main,  bg:PALETTE.indigo.light,  trend:calcTrend(stats.totalFormations, prevStats.totalFormations),  sub:`Année ${primaryYear}` },
@@ -522,7 +529,7 @@ export default function Stats() {
                 ))}
             </Grid>
 
-            {/* TABS */}
+            {/* ── TABS ─────────────────────────────────────────────────────── */}
             <Box sx={{ mb:3, borderBottom:'1px solid #E2E8F0', overflowX:'auto' }}>
                 <Tabs
                     value={activeTab}
@@ -544,11 +551,18 @@ export default function Stats() {
             <AnimatePresence mode="wait">
                 <motion.div key={activeTab} initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }} transition={{ duration:.3 }}>
 
-                    {/* TAB 0 — ÉVOLUTION MENSUELLE */}
+                    {/* ═══════════════════════════════════════════
+                        TAB 0 — ÉVOLUTION MENSUELLE
+                    ═══════════════════════════════════════════ */}
                     {activeTab === 0 && (
                         <Grid container spacing={2.5}>
                             <Grid item xs={12}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                <Card sx={{
+                                    border:'1px solid #E2E8F0',
+                                    borderRadius:3,
+                                    boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                    overflow:'hidden',
+                                }}>
                                     <CardContent sx={{ p:3 }}>
                                         <Box sx={{ display:'flex', justifyContent:'space-between', alignItems:'center', mb:2.5, flexWrap:'wrap', gap:1.5 }}>
                                             <Box>
@@ -565,6 +579,7 @@ export default function Stats() {
                                                 ))}
                                             </ToggleButtonGroup>
                                         </Box>
+                                        {/* Légende */}
                                         <Box sx={{ display:'flex', gap:2.5, mb:2, flexWrap:'wrap' }}>
                                             {activeYears.map((year, idx) => (
                                                 <Box key={year} sx={{ display:'flex', alignItems:'center', gap:.8 }}>
@@ -590,7 +605,11 @@ export default function Stats() {
                                                 <YAxis tick={{ fontSize:11, fill:'#94A3B8' }} axisLine={false} tickLine={false} />
                                                 <Tooltip content={<DarkTooltip />} />
                                                 {activeYears.map((year, idx) => (
-                                                    <Area key={year} type="monotone" dataKey={`val_${year}`} name={String(year)}
+                                                    <Area
+                                                        key={year}
+                                                        type="monotone"
+                                                        dataKey={`val_${year}`}
+                                                        name={String(year)}
                                                         stroke={YEAR_COLORS[idx % YEAR_COLORS.length]}
                                                         fill={idx === 0 ? `url(#grd_${year})` : 'transparent'}
                                                         strokeWidth={idx === 0 ? 3 : 2}
@@ -604,18 +623,32 @@ export default function Stats() {
                                     </CardContent>
                                 </Card>
                             </Grid>
+                            {/* Mini cards mensuelles */}
                             {(stats.evolutionMensuelle || []).slice(0, 6).map((m, i) => (
                                 <Grid item xs={6} sm={4} md={2} key={i}>
                                     <motion.div initial={{ opacity:0, scale:.9 }} animate={{ opacity:1, scale:1 }} transition={{ delay: i * 0.05 }}>
-                                        <Card sx={{ border:'1px solid #E2E8F0', borderRadius:2.5, boxShadow:'none', textAlign:'center',
-                                            transition:'all 0.3s ease', '&:hover': { transform:'translateY(-3px)', boxShadow:'0 8px 24px rgba(0,0,0,0.06)' } }}>
+                                        <Card sx={{
+                                            border:'1px solid #E2E8F0',
+                                            borderRadius:2.5,
+                                            boxShadow:'none',
+                                            textAlign:'center',
+                                            transition:'all 0.3s ease',
+                                            '&:hover': {
+                                                transform:'translateY(-3px)',
+                                                boxShadow:'0 8px 24px rgba(0,0,0,0.06)',
+                                            }
+                                        }}>
                                             <CardContent sx={{ p:1.5 }}>
                                                 <Typography sx={{ fontSize:'0.72rem', color:'#94A3B8', mb:.3 }}>{m.mois}</Typography>
                                                 <Typography sx={{ fontSize:'1.3rem', fontWeight:800, color:'#0F172A' }}>{m.formations}</Typography>
                                                 <Typography sx={{ fontSize:'0.68rem', color:'#64748B' }}>formations</Typography>
                                                 <Box sx={{ height:3, bgcolor:'#F1F5F9', borderRadius:2, mt:1, overflow:'hidden' }}>
-                                                    <Box sx={{ height:'100%', borderRadius:2, bgcolor:PALETTE.indigo.main,
-                                                        width:`${Math.round((m.formations||0) / Math.max(...(stats.evolutionMensuelle||[]).map(x => x.formations||1)) * 100)}%` }} />
+                                                    <Box sx={{
+                                                        height:'100%',
+                                                        borderRadius:2,
+                                                        bgcolor:PALETTE.indigo.main,
+                                                        width:`${Math.round((m.formations||0) / Math.max(...(stats.evolutionMensuelle||[]).map(x => x.formations||1)) * 100)}%`,
+                                                    }} />
                                                 </Box>
                                             </CardContent>
                                         </Card>
@@ -625,20 +658,34 @@ export default function Stats() {
                         </Grid>
                     )}
 
-                    {/* TAB 1 — COMPARAISON MULTI-ANNÉES */}
+                    {/* ═══════════════════════════════════════════
+                        TAB 1 — COMPARAISON MULTI-ANNÉES
+                    ═══════════════════════════════════════════ */}
                     {activeTab === 1 && (
                         <Grid container spacing={2.5}>
                             <Grid item xs={12}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                <Card sx={{
+                                    border:'1px solid #E2E8F0',
+                                    borderRadius:3,
+                                    boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                    overflow:'hidden',
+                                }}>
                                     <CardContent sx={{ p:3 }}>
                                         <Box sx={{ display:'flex', justifyContent:'space-between', alignItems:'center', mb:2, flexWrap:'wrap', gap:1 }}>
                                             <Box>
-                                                <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A' }}>Tendance pluriannuelle — 2022→2026</Typography>
+                                                <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A' }}>
+                                                    Tendance pluriannuelle — 2022→2026
+                                                </Typography>
                                                 <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8' }}>Progression sur 5 ans</Typography>
                                             </Box>
                                             <ToggleButtonGroup value={chartMetric} exclusive onChange={(_, v) => v && setChartMetric(v)} size="small">
-                                                {[{v:'formations',l:'Formations'},{v:'participants',l:'Participants'},{v:'budget',l:'Budget'},{v:'tauxPresence',l:'Présence'},{v:'noteMoyenne',l:'Note'}].map(({ v, l }) => (
-                                                    <ToggleButton key={v} value={v} sx={{ textTransform:'none', fontSize:'0.75rem', px:1.2, py:.4, '&.Mui-selected': { bgcolor:'#EEF2FF', color:'#6366F1' } }}>{l}</ToggleButton>
+                                                {[
+                                                    {v:'formations',l:'Formations'},{v:'participants',l:'Participants'},
+                                                    {v:'budget',l:'Budget'},{v:'tauxPresence',l:'Présence'},{v:'noteMoyenne',l:'Note'}
+                                                ].map(({ v, l }) => (
+                                                    <ToggleButton key={v} value={v} sx={{ textTransform:'none', fontSize:'0.75rem', px:1.2, py:.4, '&.Mui-selected': { bgcolor:'#EEF2FF', color:'#6366F1' } }}>
+                                                        {l}
+                                                    </ToggleButton>
                                                 ))}
                                             </ToggleButtonGroup>
                                         </Box>
@@ -654,10 +701,15 @@ export default function Stats() {
                                                 <XAxis dataKey="year" tick={{ fontSize:12, fill:'#475569', fontWeight:700 }} axisLine={false} tickLine={false} />
                                                 <YAxis tick={{ fontSize:11, fill:'#94A3B8' }} axisLine={false} tickLine={false} />
                                                 <Tooltip content={<DarkTooltip />} />
-                                                <Area type="monotone" dataKey={chartMetric}
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey={chartMetric}
                                                     name={chartMetric==='formations'?'Formations':chartMetric==='participants'?'Participants':chartMetric==='budget'?'Budget (DT)':chartMetric==='tauxPresence'?'Taux présence (%)':'Note moy. /20'}
-                                                    stroke="#6366F1" fill="url(#annGrad)" strokeWidth={3}
-                                                    dot={{ fill:'#6366F1', r:7, strokeWidth:2, stroke:'#fff' }} activeDot={{ r:9 }}
+                                                    stroke="#6366F1"
+                                                    fill="url(#annGrad)"
+                                                    strokeWidth={3}
+                                                    dot={{ fill:'#6366F1', r:7, strokeWidth:2, stroke:'#fff' }}
+                                                    activeDot={{ r:9 }}
                                                 />
                                             </ComposedChart>
                                         </ResponsiveContainer>
@@ -665,18 +717,32 @@ export default function Stats() {
                                 </Card>
                             </Grid>
                             <Grid item xs={12}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                <Card sx={{
+                                    border:'1px solid #E2E8F0',
+                                    borderRadius:3,
+                                    boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                    overflow:'hidden',
+                                }}>
                                     <CardContent sx={{ p:3 }}>
-                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:2 }}>Tableau comparatif · 5 années · indicateurs clés</Typography>
+                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:2 }}>
+                                            Tableau comparatif · 5 années · indicateurs clés
+                                        </Typography>
                                         <CompareTable allStats={allStats} mainYear={primaryYear} />
                                     </CardContent>
                                 </Card>
                             </Grid>
                             {compareYears.length > 0 && (
                                 <Grid item xs={12}>
-                                    <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                    <Card sx={{
+                                        border:'1px solid #E2E8F0',
+                                        borderRadius:3,
+                                        boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                        overflow:'hidden',
+                                    }}>
                                         <CardContent sx={{ p:3 }}>
-                                            <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:2 }}>Formations par domaine — {activeYears.join(' · ')}</Typography>
+                                            <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:2 }}>
+                                                Formations par domaine — {activeYears.join(' · ')}
+                                            </Typography>
                                             <Box sx={{ display:'flex', gap:2, mb:1.5, flexWrap:'wrap' }}>
                                                 {activeYears.map((year, idx) => (
                                                     <Box key={year} sx={{ display:'flex', alignItems:'center', gap:.7 }}>
@@ -686,15 +752,19 @@ export default function Stats() {
                                                 ))}
                                             </Box>
                                             <ResponsiveContainer width="100%" height={260}>
-                                                <BarChart data={(stats.formationsParDomaine||[]).map(d => {
-                                                    const row = { name: d.name };
-                                                    activeYears.forEach(year => {
-                                                        const yd = allStats[year] || generateDemoData(year);
-                                                        const found = (yd.formationsParDomaine||[]).find(x => x.name === d.name);
-                                                        row[String(year)] = found?.value || 0;
-                                                    });
-                                                    return row;
-                                                })} barSize={18} barGap={3}>
+                                                <BarChart
+                                                    data={(stats.formationsParDomaine||[]).map(d => {
+                                                        const row = { name: d.name };
+                                                        activeYears.forEach(year => {
+                                                            const yd = allStats[year] || generateDemoData(year);
+                                                            const found = (yd.formationsParDomaine||[]).find(x => x.name === d.name);
+                                                            row[String(year)] = found?.value || 0;
+                                                        });
+                                                        return row;
+                                                    })}
+                                                    barSize={18}
+                                                    barGap={3}
+                                                >
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                                                     <XAxis dataKey="name" tick={{ fontSize:11, fill:'#94A3B8' }} axisLine={false} />
                                                     <YAxis tick={{ fontSize:11, fill:'#94A3B8' }} axisLine={false} />
@@ -711,14 +781,25 @@ export default function Stats() {
                         </Grid>
                     )}
 
-                    {/* TAB 2 — NOTES & RESULTATS */}
+                    {/* ═══════════════════════════════════════════
+                        TAB 2 — NOTES & RÉSULTATS
+                    ═══════════════════════════════════════════ */}
                     {activeTab === 2 && (
                         <Grid container spacing={2.5}>
                             <Grid item xs={12} md={7}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                <Card sx={{
+                                    border:'1px solid #E2E8F0',
+                                    borderRadius:3,
+                                    boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                    overflow:'hidden',
+                                }}>
                                     <CardContent sx={{ p:3 }}>
-                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Notes par domaine — {primaryYear}</Typography>
-                                        <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Note /20 · % réussite · ligne rouge = seuil 70%</Typography>
+                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>
+                                            Notes par domaine — {primaryYear}
+                                        </Typography>
+                                        <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>
+                                            Note /20 · % réussite · ligne rouge = seuil 70%
+                                        </Typography>
                                         {(stats.notesMoyennesParDomaine || []).map((d, i) => (
                                             <NoteBar key={i} domaine={d.domaine} note={d.note} pourcentage={d.pourcentage || Math.round(d.note/20*100)} color={DOMAIN_COLORS[i % DOMAIN_COLORS.length]} index={i} />
                                         ))}
@@ -728,7 +809,12 @@ export default function Stats() {
                             <Grid item xs={12} md={5}>
                                 <Grid container spacing={2.5}>
                                     <Grid item xs={12}>
-                                        <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                        <Card sx={{
+                                            border:'1px solid #E2E8F0',
+                                            borderRadius:3,
+                                            boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                            overflow:'hidden',
+                                        }}>
                                             <CardContent sx={{ p:3 }}>
                                                 <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Note globale — 2022–2026</Typography>
                                                 <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Moyenne toutes formations</Typography>
@@ -752,7 +838,12 @@ export default function Stats() {
                                         </Card>
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                        <Card sx={{
+                                            border:'1px solid #E2E8F0',
+                                            borderRadius:3,
+                                            boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                            overflow:'hidden',
+                                        }}>
                                             <CardContent sx={{ p:3 }}>
                                                 <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Taux présence — 2022–2026</Typography>
                                                 <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>% inscrits présents</Typography>
@@ -771,10 +862,19 @@ export default function Stats() {
                                 </Grid>
                             </Grid>
                             <Grid item xs={12}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                <Card sx={{
+                                    border:'1px solid #E2E8F0',
+                                    borderRadius:3,
+                                    boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                    overflow:'hidden',
+                                }}>
                                     <CardContent sx={{ p:3 }}>
-                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Notes par domaine — comparaison {activeYears.join(' · ')}</Typography>
-                                        <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Ligne rouge = seuil admissibilité 14/20 (70%)</Typography>
+                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>
+                                            Notes par domaine — comparaison {activeYears.join(' · ')}
+                                        </Typography>
+                                        <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>
+                                            Ligne rouge = seuil admissibilité 14/20 (70%)
+                                        </Typography>
                                         <Box sx={{ display:'flex', gap:2, mb:1.5, flexWrap:'wrap' }}>
                                             {activeYears.map((year, idx) => (
                                                 <Box key={year} sx={{ display:'flex', alignItems:'center', gap:.7 }}>
@@ -805,7 +905,9 @@ export default function Stats() {
                         </Grid>
                     )}
 
-                    {/* TAB 3 — BUDGET */}
+                    {/* ═══════════════════════════════════════════
+                        TAB 3 — BUDGET
+                    ═══════════════════════════════════════════ */}
                     {activeTab === 3 && (
                         <Grid container spacing={2.5}>
                             <Grid item xs={12}>
@@ -818,8 +920,17 @@ export default function Stats() {
                                     ].map((item, i) => (
                                         <Grid item xs={6} md={3} key={i}>
                                             <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay: i * 0.08 }}>
-                                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'none', overflow:'hidden',
-                                                    transition:'all 0.3s ease', '&:hover': { transform:'translateY(-4px)', boxShadow:'0 12px 32px rgba(0,0,0,0.08)' } }}>
+                                                <Card sx={{
+                                                    border:'1px solid #E2E8F0',
+                                                    borderRadius:3,
+                                                    boxShadow:'none',
+                                                    overflow:'hidden',
+                                                    transition:'all 0.3s ease',
+                                                    '&:hover': {
+                                                        transform:'translateY(-4px)',
+                                                        boxShadow:'0 12px 32px rgba(0,0,0,0.08)',
+                                                    }
+                                                }}>
                                                     <Box sx={{ height:3, bgcolor:item.color, borderRadius:'12px 12px 0 0' }} />
                                                     <CardContent sx={{ p:2.5 }}>
                                                         <Box sx={{ p:1, borderRadius:2, bgcolor:item.bg, display:'inline-flex', mb:1.5 }}>
@@ -835,7 +946,12 @@ export default function Stats() {
                                 </Grid>
                             </Grid>
                             <Grid item xs={12}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                <Card sx={{
+                                    border:'1px solid #E2E8F0',
+                                    borderRadius:3,
+                                    boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                    overflow:'hidden',
+                                }}>
                                     <CardContent sx={{ p:3 }}>
                                         <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Budget annuel 2022–2026 · Réel vs Objectif</Typography>
                                         <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Barres = réel · ligne pointillée = objectif 100 000 DT</Typography>
@@ -857,7 +973,12 @@ export default function Stats() {
                                 </Card>
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                <Card sx={{
+                                    border:'1px solid #E2E8F0',
+                                    borderRadius:3,
+                                    boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                    overflow:'hidden',
+                                }}>
                                     <CardContent sx={{ p:3 }}>
                                         <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Budget par domaine — {primaryYear}</Typography>
                                         <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Répartition année principale</Typography>
@@ -883,7 +1004,12 @@ export default function Stats() {
                                 </Card>
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
+                                <Card sx={{
+                                    border:'1px solid #E2E8F0',
+                                    borderRadius:3,
+                                    boxShadow:'0 4px 20px rgba(0,0,0,0.04)',
+                                    overflow:'hidden',
+                                }}>
                                     <CardContent sx={{ p:3 }}>
                                         <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Budget trimestriel — {primaryYear}</Typography>
                                         <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Réel vs objectif</Typography>
@@ -895,153 +1021,6 @@ export default function Stats() {
                                                 <Tooltip content={<DarkTooltip />} />
                                                 <Bar dataKey="budget" name="Budget réel" fill={PALETTE.indigo.main} radius={[5,5,0,0]} />
                                                 <Bar dataKey="objectif" name="Objectif" fill="#E2E8F0" radius={[5,5,0,0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        </Grid>
-                    )}
-
-                    {/* TAB 4 — FORMATEURS (sans classement/ranking) */}
-                    {activeTab === 4 && (
-                        <Grid container spacing={2.5}>
-                            {/* KPI Formateurs */}
-                            <Grid item xs={12}>
-                                <Grid container spacing={2}>
-                                    {[
-                                        { label:'Total formateurs', value:stats.totalFormateurs||0, color:PALETTE.indigo.main, bg:PALETTE.indigo.light, icon:Groups },
-                                        { label:'Formateurs internes', value:stats.formateursInternes||0, color:PALETTE.emerald.main, bg:PALETTE.emerald.light, icon:Person },
-                                        { label:'Formateurs externes', value:stats.formateursExternes||0, color:'#8B5CF6', bg:'#F5F3FF', icon:Person },
-                                        { label:'Taux occupation', value:`${stats.tauxOccupationFormateurs||0}%`, color:PALETTE.amber.main, bg:PALETTE.amber.light, icon:Assessment },
-                                    ].map((item, i) => (
-                                        <Grid item xs={6} md={3} key={i}>
-                                            <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay: i * 0.08 }}>
-                                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'none', overflow:'hidden',
-                                                    transition:'all 0.3s ease', '&:hover': { transform:'translateY(-4px)', boxShadow:'0 12px 32px rgba(0,0,0,0.08)' } }}>
-                                                    <Box sx={{ height:3, bgcolor:item.color, borderRadius:'12px 12px 0 0' }} />
-                                                    <CardContent sx={{ p:2.5 }}>
-                                                        <Box sx={{ p:1, borderRadius:2, bgcolor:item.bg, display:'inline-flex', mb:1.5 }}>
-                                                            <item.icon sx={{ color:item.color, fontSize:20 }} />
-                                                        </Box>
-                                                        <Typography sx={{ fontWeight:800, fontSize:'1.2rem', color:item.color, lineHeight:1.2 }}>{item.value}</Typography>
-                                                        <Typography sx={{ fontSize:'0.78rem', color:'#64748B', mt:.4 }}>{item.label}</Typography>
-                                                    </CardContent>
-                                                </Card>
-                                            </motion.div>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            </Grid>
-
-                            {/* Internes vs Externes */}
-                            <Grid item xs={12} md={5}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
-                                    <CardContent sx={{ p:3 }}>
-                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Répartition Internes / Externes</Typography>
-                                        <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Année {primaryYear}</Typography>
-                                        <Box sx={{ display:'flex', gap:1.5, justifyContent:'center', mb:2 }}>
-                                            {[
-                                                { label:'Internes', value:stats.formateursInternes||0, color:PALETTE.emerald.main, bg:PALETTE.emerald.light },
-                                                { label:'Externes', value:stats.formateursExternes||0, color:'#8B5CF6', bg:'#F5F3FF' }
-                                            ].map((item, i) => (
-                                                <Box key={i} sx={{ textAlign:'center', p:1.5, borderRadius:2, border:`1px solid ${item.color}30`, bgcolor:item.color+'08', flex:1 }}>
-                                                    <Typography sx={{ fontWeight:800, fontSize:'1.5rem', color:item.color }}>{item.value}</Typography>
-                                                    <Typography sx={{ fontSize:'0.72rem', color:'#64748B' }}>{item.label}</Typography>
-                                                </Box>
-                                            ))}
-                                        </Box>
-                                        <ResponsiveContainer width="100%" height={200}>
-                                            <PieChart>
-                                                <Pie data={[
-                                                    { name:'Internes', value:stats.formateursInternes||0 },
-                                                    { name:'Externes', value:stats.formateursExternes||0 }
-                                                ]} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value">
-                                                    <Cell fill={PALETTE.emerald.main} strokeWidth={0} />
-                                                    <Cell fill="#8B5CF6" strokeWidth={0} />
-                                                </Pie>
-                                                <Tooltip content={<DarkTooltip />} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-
-                            {/* Formateurs par domaine */}
-                            <Grid item xs={12} md={7}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
-                                    <CardContent sx={{ p:3 }}>
-                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Formateurs par domaine — {primaryYear}</Typography>
-                                        <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Internes et externes par spécialité</Typography>
-                                        <Box sx={{ display:'flex', gap:2, mb:1.5, flexWrap:'wrap' }}>
-                                            <Box sx={{ display:'flex', alignItems:'center', gap:.7 }}>
-                                                <Box sx={{ width:10, height:10, borderRadius:2, bgcolor:PALETTE.emerald.main }} />
-                                                <Typography sx={{ fontSize:'0.78rem', color:'#64748B' }}>Internes</Typography>
-                                            </Box>
-                                            <Box sx={{ display:'flex', alignItems:'center', gap:.7 }}>
-                                                <Box sx={{ width:10, height:10, borderRadius:2, bgcolor:'#8B5CF6' }} />
-                                                <Typography sx={{ fontSize:'0.78rem', color:'#64748B' }}>Externes</Typography>
-                                            </Box>
-                                        </Box>
-                                        <ResponsiveContainer width="100%" height={260}>
-                                            <BarChart data={stats.formateursParDomaine||[]} barSize={20} barGap={4}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize:11, fill:'#94A3B8' }} axisLine={false} />
-                                                <YAxis tick={{ fontSize:11, fill:'#94A3B8' }} axisLine={false} />
-                                                <Tooltip content={<DarkTooltip />} />
-                                                <Bar dataKey="internes" name="Internes" fill={PALETTE.emerald.main} radius={[4,4,0,0]} />
-                                                <Bar dataKey="externes" name="Externes" fill="#8B5CF6" radius={[4,4,0,0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-
-                            {/* Taux d occupation annuel */}
-                            <Grid item xs={12} md={6}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
-                                    <CardContent sx={{ p:3 }}>
-                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Taux d occupation des formateurs</Typography>
-                                        <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>% de temps en session de formation</Typography>
-                                        <ResponsiveContainer width="100%" height={200}>
-                                            <AreaChart data={ALL_YEARS.map(y => {
-                                                const d = allStats[y] || generateDemoData(y);
-                                                return { year: String(y), taux: d.tauxOccupationFormateurs || Math.round(65 + (y-2022)*3 + Math.random()*15) };
-                                            })} margin={{ top:5, right:10, bottom:0, left:-10 }}>
-                                                <defs>
-                                                    <linearGradient id="occGrad" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.2} />
-                                                        <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.01} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                                                <XAxis dataKey="year" tick={{ fontSize:11, fill:'#475569' }} axisLine={false} tickLine={false} />
-                                                <YAxis domain={[40,100]} tick={{ fontSize:10, fill:'#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
-                                                <Tooltip content={<DarkTooltip />} />
-                                                <Area type="monotone" dataKey="taux" name="Taux occupation" stroke="#F59E0B" fill="url(#occGrad)" strokeWidth={2.5} dot={{ fill:'#F59E0B', r:5, strokeWidth:2, stroke:'#fff' }} />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-
-                            {/* Participants par structure */}
-                            <Grid item xs={12} md={6}>
-                                <Card sx={{ border:'1px solid #E2E8F0', borderRadius:3, boxShadow:'0 4px 20px rgba(0,0,0,0.04)', overflow:'hidden' }}>
-                                    <CardContent sx={{ p:3 }}>
-                                        <Typography sx={{ fontWeight:700, fontSize:'1rem', color:'#0F172A', mb:.5 }}>Participants par structure — {primaryYear}</Typography>
-                                        <Typography sx={{ fontSize:'0.75rem', color:'#94A3B8', mb:2 }}>Répartition par direction</Typography>
-                                        <ResponsiveContainer width="100%" height={200}>
-                                            <BarChart data={stats.participantsParStructure||[]} layout="vertical" barSize={22}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                                                <XAxis type="number" tick={{ fontSize:10, fill:'#94A3B8' }} axisLine={false} />
-                                                <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:'#64748B' }} axisLine={false} width={110} />
-                                                <Tooltip content={<DarkTooltip />} />
-                                                <Bar dataKey="participants" name="Participants" radius={[0,6,6,0]}>
-                                                    {(stats.participantsParStructure||[]).map((_, i) => (
-                                                        <Cell key={i} fill={DOMAIN_COLORS[i%DOMAIN_COLORS.length]} />
-                                                    ))}
-                                                </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </CardContent>

@@ -2,10 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { setToken, clearToken, getToken, setLogoutCallback } from '../services/api';
 
+// ─── SÉCURITÉ : le token JWT ne doit JAMAIS aller dans localStorage ──────────
+// localStorage est accessible par tout JS de la page (XSS).
+// On stocke uniquement les métadonnées non-sensibles en persistence.
+// Le token vit en sessionStorage (onglet uniquement) + mémoire (api.js).
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const useAuthStore = create(
     persist(
         (set, get) => ({
-            // Ne stocker QUE les infos non-sensibles en persistance (pas le token)
             user: null,
             isAuthenticated: false,
             isLoading: false,
@@ -32,7 +37,7 @@ export const useAuthStore = create(
                         throw new Error('Token manquant dans la réponse serveur');
                     }
 
-                    // Stocker le token en mémoire (pas dans localStorage)
+                    // Token en sessionStorage seulement (disparaît à la fermeture de l'onglet)
                     setToken(data.token);
 
                     const user = {
@@ -41,19 +46,19 @@ export const useAuthStore = create(
                         email: data.email,
                         role: data.role || 'ROLE_USER',
                         firstLogin: data.firstLogin === true || data.firstLogin === 'true',
-                        // NE PAS stocker le token dans l'objet user (persisté en localStorage)
+                        // JAMAIS le token dans user (objet persisté)
                     };
 
                     set({ user, isAuthenticated: true, isLoading: false, error: null });
                     return { success: true, user };
                 } catch (error) {
                     set({ isLoading: false, error: error.message });
-                    return { success: false, error: error.message };
+                    // Message générique côté client — ne pas exposer les détails
+                    return { success: false, error: 'Identifiants incorrects ou erreur serveur.' };
                 }
             },
 
             logout: async () => {
-                // Appeler l'endpoint logout pour blacklister le token côté serveur
                 try {
                     const token = getToken();
                     if (token) {
@@ -69,7 +74,6 @@ export const useAuthStore = create(
                         );
                     }
                 } catch (e) {
-                    // Continuer le logout local même si l'appel serveur échoue
                     console.warn('Logout serveur échoué:', e.message);
                 }
                 clearToken();
@@ -144,7 +148,7 @@ export const useAuthStore = create(
         }),
         {
             name: 'auth-storage',
-            // Persister UNIQUEMENT les infos non-sensibles — jamais le token JWT
+            // Persister UNIQUEMENT les métadonnées non-sensibles — JAMAIS le token
             partialize: (state) => ({
                 user: state.user ? {
                     id: state.user.id,
@@ -160,5 +164,4 @@ export const useAuthStore = create(
     )
 );
 
-// Câbler le callback de logout dans le service API
 setLogoutCallback(() => useAuthStore.getState().logout());

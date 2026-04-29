@@ -34,13 +34,16 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
-    // ✅ FIX 1 — Lire depuis application.properties (qui supporte ${VAR:default})
-    // au lieu de System.getenv() qui ignore le fichier de config
-    @Value("${app.frontend.url:http://localhost:3000}")
+    @Value("${app.frontend.url}")
     private String frontendUrl;
+
+    // Profil actif (dev / prod). Injecter via -Dspring.profiles.active=prod
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+        // BCrypt cost=12 — bon équilibre sécurité/performance
         return new BCryptPasswordEncoder(12);
     }
 
@@ -79,7 +82,7 @@ public class SecurityConfig {
                                                 "style-src 'self' 'unsafe-inline'; " +
                                                 "img-src 'self' data:; " +
                                                 "font-src 'self'; " +
-                                                "connect-src 'self' " + frontendUrl + "; " +
+                                                "connect-src 'self'; " +
                                                 "frame-ancestors 'none'; " +
                                                 "base-uri 'self'; " +
                                                 "form-action 'self'"
@@ -109,6 +112,12 @@ public class SecurityConfig {
                         .requestMatchers("/public/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/stats/**").hasAnyRole("RESPONSABLE", "ADMIN")
+                        // ROLE_RESPONSABLE ne peut accéder qu'aux stats
+                        .requestMatchers("/formations/**", "/participants/**",
+                                "/formateurs/**", "/inscriptions/**",
+                                "/domaines/**", "/structures/**",
+                                "/profils/**", "/employeurs/**")
+                        .hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -122,15 +131,15 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ FIX 2 — Utiliser @Value injecté au lieu de System.getenv()
-        // Supporte aussi localhost pour le développement
         String origin = frontendUrl.trim();
-        // Toujours autoriser localhost en dev (ne pas casser le dev local)
-        if (origin.contains("localhost:3000")) {
-            configuration.setAllowedOrigins(List.of(origin));
-        } else {
-            // Production : autoriser le domaine de prod + localhost pour les devs
+        boolean isDev = "dev".equalsIgnoreCase(activeProfile);
+
+        if (isDev) {
+            // En dev : accepter l'URL configurée + localhost:3000
             configuration.setAllowedOrigins(List.of(origin, "http://localhost:3000"));
+        } else {
+            // En PRODUCTION : seulement l'URL exacte configurée, JAMAIS localhost
+            configuration.setAllowedOrigins(List.of(origin));
         }
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
@@ -144,7 +153,6 @@ public class SecurityConfig {
                 "Access-Control-Request-Headers"
         ));
         configuration.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
-        // ✅ FIX 3 — Obligatoire pour withCredentials: true côté frontend
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(1800L);
 
