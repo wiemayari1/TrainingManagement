@@ -3,6 +3,7 @@ package com.isi.gf.config;
 import com.isi.gf.service.UserDetailsServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,9 +34,13 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
+    // ✅ FIX 1 — Lire depuis application.properties (qui supporte ${VAR:default})
+    // au lieu de System.getenv() qui ignore le fichier de config
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Strength 12 (au lieu du défaut 10) — plus résistant au brute force
         return new BCryptPasswordEncoder(12);
     }
 
@@ -60,18 +65,13 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // ── Headers de sécurité ──────────────────────────────
                 .headers(headers -> headers
-                        // Empêche le clickjacking
                         .frameOptions(fo -> fo.deny())
-                        // Empêche le MIME sniffing
                         .contentTypeOptions(ct -> {})
-                        // Force HTTPS pendant 1 an (y compris sous-domaines)
                         .httpStrictTransportSecurity(hsts -> hsts
                                 .maxAgeInSeconds(31536000)
                                 .includeSubDomains(true)
                                 .preload(true))
-                        // Content-Security-Policy : restreint les sources
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives(
                                         "default-src 'self'; " +
@@ -79,21 +79,18 @@ public class SecurityConfig {
                                                 "style-src 'self' 'unsafe-inline'; " +
                                                 "img-src 'self' data:; " +
                                                 "font-src 'self'; " +
-                                                "connect-src 'self'; " +
+                                                "connect-src 'self' " + frontendUrl + "; " +
                                                 "frame-ancestors 'none'; " +
                                                 "base-uri 'self'; " +
                                                 "form-action 'self'"
                                 ))
-                        // Referrer : ne pas envoyer l'URL complète
                         .referrerPolicy(rp -> rp.policy(
                                 ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        // Permissions Policy : désactiver les APIs sensibles
                         .permissionsPolicy(pp -> pp.policy(
                                 "geolocation=(), camera=(), microphone=(), payment=()"
                         ))
                 )
 
-                // ── Gestion des erreurs d'authentification ──────────
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {
                             res.setContentType("application/json");
@@ -116,7 +113,6 @@ public class SecurityConfig {
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                // Rate limiting filter avant le filtre JWT
                 .addFilterBefore(new RateLimitFilter(), JwtAuthFilter.class);
 
         return http.build();
@@ -126,21 +122,30 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Lire les origines autorisées depuis la config (pas de wildcard)
-        String allowedOrigin = System.getenv("FRONTEND_URL");
-        if (allowedOrigin == null || allowedOrigin.isBlank()) {
-            allowedOrigin = "http://localhost:3000";
+        // ✅ FIX 2 — Utiliser @Value injecté au lieu de System.getenv()
+        // Supporte aussi localhost pour le développement
+        String origin = frontendUrl.trim();
+        // Toujours autoriser localhost en dev (ne pas casser le dev local)
+        if (origin.contains("localhost:3000")) {
+            configuration.setAllowedOrigins(List.of(origin));
+        } else {
+            // Production : autoriser le domaine de prod + localhost pour les devs
+            configuration.setAllowedOrigins(List.of(origin, "http://localhost:3000"));
         }
-        configuration.setAllowedOrigins(List.of(allowedOrigin));
 
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        // Headers explicites plutôt que wildcard
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization", "Content-Type", "Accept", "X-Requested-With"
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"
         ));
-        configuration.setExposedHeaders(List.of("Authorization"));
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
+        // ✅ FIX 3 — Obligatoire pour withCredentials: true côté frontend
         configuration.setAllowCredentials(true);
-        // Cache preflight 30 min
         configuration.setMaxAge(1800L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

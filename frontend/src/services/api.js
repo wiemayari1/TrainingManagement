@@ -1,28 +1,26 @@
 import axios from 'axios';
 
-const API_BASE = import.meta?.env?.REACT_APP_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:8081/api';
+// ✅ FIX — Utiliser process.env (Create React App) pas import.meta.env (Vite)
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8081/api';
 
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  // Envoie les cookies avec chaque requête (pour migration future vers HttpOnly cookies)
-  withCredentials: true,
-  // Timeout : évite les requêtes suspendues indéfiniment
+  // ✅ FIX — withCredentials: true cause des problèmes CORS en HTTPS quand
+  // le frontend et le backend sont sur des sous-domaines différents.
+  // On utilise le token JWT dans le header Authorization à la place (plus sûr).
+  withCredentials: false,
   timeout: 30000,
 });
 
 let logoutCallback = null;
 export const setLogoutCallback = (cb) => { logoutCallback = cb; };
 
-// ── Token en mémoire (plus sécurisé que localStorage) ──────────────────────
-// localStorage est accessible par tout JS de la page (XSS).
-// Une variable module n'est accessible que par ce code-ci.
+// ── Token en mémoire ────────────────────────────────────────────────────────
 let inMemoryToken = null;
 
 export const setToken = (token) => {
   inMemoryToken = token;
-  // Garder aussi dans sessionStorage (onglet courant seulement, pas persisté entre onglets)
-  // JAMAIS dans localStorage pour un token JWT d'auth
   if (token) {
     sessionStorage.setItem('_t', token);
   } else {
@@ -31,7 +29,6 @@ export const setToken = (token) => {
 };
 
 export const getToken = () => {
-  // Restaurer depuis sessionStorage au rechargement de page
   if (!inMemoryToken) {
     inMemoryToken = sessionStorage.getItem('_t') || null;
   }
@@ -41,22 +38,20 @@ export const getToken = () => {
 export const clearToken = () => {
   inMemoryToken = null;
   sessionStorage.removeItem('_t');
-  // Nettoyage ancienne clé localStorage si elle existait
   localStorage.removeItem('token');
 };
 
-// ── Intercepteur requête : injecte le token ─────────────────────────────────
+// ── Intercepteur requête ─────────────────────────────────────────────────────
 api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // Retirer les headers dangereux envoyés par le code legacy
   delete config.headers['X-Forwarded-For'];
   return config;
 });
 
-// ── Intercepteur réponse : gestion globale des erreurs ──────────────────────
+// ── Intercepteur réponse ─────────────────────────────────────────────────────
 api.interceptors.response.use(
     (res) => res,
     (err) => {
@@ -65,7 +60,6 @@ api.interceptors.response.use(
         if (logoutCallback) logoutCallback();
         else window.location.href = '/login';
       }
-      // Ne pas exposer les détails d'erreur serveur au frontend
       if (err.response?.status >= 500) {
         console.error('Erreur serveur:', err.response?.status);
       }
