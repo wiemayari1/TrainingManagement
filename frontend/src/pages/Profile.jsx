@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box, Typography, TextField, Button, Avatar, Chip, Alert,
-    Snackbar, IconButton, Divider, Stack, Paper, Grid,
+    Snackbar, IconButton, Stack, Paper, Grid,
 } from '@mui/material';
 import {
     ArrowBack, Lock, Visibility, VisibilityOff, Save,
@@ -11,13 +11,12 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
-
-const API_BASE = 'http://localhost:8081/api';
+import api from '../services/api';
 
 const roleConfig = {
-    ROLE_ADMIN: { label: 'Administrateur', color: '#DC2626', bg: '#FEF2F2', icon: AdminPanelSettings },
-    ROLE_RESPONSABLE: { label: 'Responsable', color: '#D97706', bg: '#FFFBEB', icon: Badge },
-    ROLE_USER: { label: 'Utilisateur', color: '#059669', bg: '#ECFDF5', icon: Person },
+    ROLE_ADMIN: { label: 'Administrateur', color: '#10B981', bg: '#ECFDF5', icon: AdminPanelSettings },
+    ROLE_RESPONSABLE: { label: 'Responsable', color: '#10B981', bg: '#ECFDF5', icon: Badge },
+    ROLE_USER: { label: 'Utilisateur', color: '#10B981', bg: '#ECFDF5', icon: Person },
 };
 
 const containerVariants = {
@@ -79,65 +78,100 @@ export default function Profile() {
 
         setPwdLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE}/auth/change-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ oldPassword: pwdForm.oldPassword, newPassword: pwdForm.newPassword }),
+            const res = await api.post('/auth/change-password', {
+                oldPassword: pwdForm.oldPassword,
+                newPassword: pwdForm.newPassword,
             });
-            const data = await res.json();
-            if (res.ok && data.success) {
+            if (res.data.success) {
                 setSuccess(true);
                 setPwdForm({ oldPassword: '', newPassword: '', confirm: '' });
                 setSnack({ open: true, msg: 'Mot de passe mis à jour', severity: 'success' });
                 setTimeout(() => setSuccess(false), 3000);
             } else {
-                setSnack({ open: true, msg: data.message || 'Erreur', severity: 'error' });
+                setSnack({ open: true, msg: res.data.message || 'Erreur', severity: 'error' });
             }
-        } catch { setSnack({ open: true, msg: 'Erreur de connexion', severity: 'error' }); }
+        } catch (err) {
+            setSnack({ open: true, msg: err.response?.data?.message || 'Erreur de connexion', severity: 'error' });
+        }
         setPwdLoading(false);
     };
 
+    const getPasswordStrength = (pwd) => {
+        let score = 0;
+        if (pwd.length >= 6) score++;
+        if (pwd.length >= 10) score++;
+        if (/[A-Z]/.test(pwd)) score++;
+        if (/[0-9]/.test(pwd)) score++;
+        if (/[^A-Za-z0-9]/.test(pwd)) score++;
+        return score;
+    };
+
+    const strength = getPasswordStrength(pwdForm.newPassword);
+    const strengthLabels = ['Très faible', 'Faible', 'Moyen', 'Fort', 'Très fort'];
+    const strengthColors = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#059669'];
+
     return (
-        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1280, mx: 'auto' }}>
+        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1280, mx: 'auto', bgcolor: '#F8FAFC', minHeight: '100vh' }}>
+
+            {/* ─── Flèche de retour simple ─── */}
+            <IconButton
+                onClick={() => navigate('/dashboard')}
+                sx={{
+                    mb: 2,
+                    color: '#64748B',
+                    '&:hover': { color: '#4F46E5', bgcolor: '#EEF2FF' },
+                }}
+            >
+                <ArrowBack sx={{ fontSize: 24 }} />
+            </IconButton>
+
             <motion.div variants={containerVariants} initial="hidden" animate="visible">
 
                 {/* ─── Header ─── */}
                 <motion.div variants={itemVariants}>
-                    <Box sx={{ mb: 3.5 }}>
-                        <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
-                            <Typography variant="h5" sx={{
-                                fontWeight: 600, color: '#111827', letterSpacing: '-0.02em', fontSize: '1.25rem'
-                            }}>
-                                Mon profil
-                            </Typography>
-                        </Stack>
-                        <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.8125rem' }}>
+                    <Box sx={{ mb: 3 }}>
+                        <Typography variant="h5" sx={{
+                            fontWeight: 700, color: '#111827', fontSize: '1.5rem', mb: 0.5
+                        }}>
+                            Mon profil
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.875rem' }}>
                             Gérez vos informations et votre sécurité
                         </Typography>
                     </Box>
                 </motion.div>
 
                 {/* ─── Content Grid ─── */}
-                <Grid container spacing={2.5}>
+                <Grid container spacing={3}>
                     {/* Left Column - Profile Info */}
                     <Grid item xs={12} lg={5}>
                         <motion.div variants={itemVariants}>
                             <Paper elevation={0} sx={{
-                                borderRadius: 2, border: '1px solid #E5E7EB', bgcolor: '#fff', overflow: 'hidden',
+                                borderRadius: 4,
+                                bgcolor: '#fff',
+                                overflow: 'hidden',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                             }}>
-                                {/* Banner */}
+                                {/* Banner violet */}
                                 <Box sx={{
-                                    height: 100,
-                                    bgcolor: '#F3F4F6',
-                                    backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(0,0,0,0.03) 1px, transparent 0)',
-                                    backgroundSize: '24px 24px',
+                                    height: 140,
+                                    bgcolor: '#7C3AED',
                                     position: 'relative',
-                                }} />
+                                    borderRadius: '16px 16px 0 0',
+                                }}>
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '40%',
+                                        background: 'linear-gradient(to top, rgba(0,0,0,0.1), transparent)',
+                                    }} />
+                                </Box>
 
                                 {/* Avatar + Info */}
                                 <Box sx={{ px: 3, pb: 3, position: 'relative' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-end', mt: -5, mb: 2.5 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mt: -7, mb: 3 }}>
                                         <Box
                                             onMouseEnter={() => setPhotoHover(true)}
                                             onMouseLeave={() => setPhotoHover(false)}
@@ -147,25 +181,30 @@ export default function Profile() {
                                             <Avatar
                                                 src={avatar || undefined}
                                                 sx={{
-                                                    width: 80, height: 80,
+                                                    width: 90,
+                                                    height: 90,
                                                     bgcolor: avatar ? 'transparent' : '#4F46E5',
                                                     color: '#fff',
                                                     fontSize: '1.75rem',
                                                     fontWeight: 600,
-                                                    border: '3px solid #fff',
-                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                                    border: '4px solid #fff',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                                                 }}
                                             >
                                                 {!avatar && initials}
                                             </Avatar>
                                             {photoHover && (
                                                 <Box sx={{
-                                                    position: 'absolute', inset: 0,
+                                                    position: 'absolute',
+                                                    inset: 0,
                                                     borderRadius: '50%',
-                                                    bgcolor: 'rgba(0,0,0,0.4)',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    bgcolor: 'rgba(0,0,0,0.5)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    transition: 'all 0.2s',
                                                 }}>
-                                                    <CameraAlt sx={{ color: '#fff', fontSize: 20 }} />
+                                                    <CameraAlt sx={{ color: '#fff', fontSize: 24 }} />
                                                 </Box>
                                             )}
                                             <input
@@ -177,99 +216,133 @@ export default function Profile() {
                                             />
                                         </Box>
 
-                                        <Box sx={{ ml: 2, mb: 0.5, flex: 1 }}>
+                                        <Box sx={{ ml: 2.5, flex: 1 }}>
                                             <Typography variant="h6" sx={{
-                                                fontWeight: 600, color: '#111827', fontSize: '1.125rem', mb: 0.5,
+                                                fontWeight: 700,
+                                                color: '#111827',
+                                                fontSize: '1.25rem',
+                                                mb: 1,
                                             }}>
                                                 {user?.login || user?.username}
                                             </Typography>
                                             <Stack direction="row" spacing={1} alignItems="center">
                                                 <Chip
-                                                    icon={<RoleIcon sx={{ fontSize: 14 }} />}
+                                                    icon={<RoleIcon sx={{ fontSize: 14, color: '#10B981' }} />}
                                                     label={rc.label}
                                                     size="small"
                                                     sx={{
-                                                        bgcolor: rc.bg, color: rc.color,
-                                                        fontWeight: 600, fontSize: '0.6875rem', height: 24,
-                                                        '& .MuiChip-icon': { color: rc.color, ml: '6px' },
+                                                        bgcolor: '#ECFDF5',
+                                                        color: '#10B981',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.75rem',
+                                                        height: 26,
+                                                        borderRadius: 5,
+                                                        '& .MuiChip-icon': { ml: '6px' },
                                                     }}
                                                 />
                                                 <Chip
+                                                    icon={<Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10B981', mr: 0.5 }} />}
                                                     label="Actif"
                                                     size="small"
                                                     sx={{
-                                                        bgcolor: '#ECFDF5', color: '#059669',
-                                                        fontWeight: 500, fontSize: '0.6875rem', height: 24,
+                                                        bgcolor: '#ECFDF5',
+                                                        color: '#10B981',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.75rem',
+                                                        height: 26,
+                                                        borderRadius: 5,
                                                     }}
                                                 />
                                             </Stack>
                                         </Box>
-
-                                        {avatar && (
-                                            <Button
-                                                onClick={handleRemovePhoto}
-                                                size="small"
-                                                sx={{
-                                                    color: '#6B7280',
-                                                    textTransform: 'none',
-                                                    fontWeight: 500,
-                                                    fontSize: '0.8125rem',
-                                                    '&:hover': { color: '#DC2626', bgcolor: '#FEF2F2' },
-                                                    mb: 0.5,
-                                                }}
-                                            >
-                                                Supprimer
-                                            </Button>
-                                        )}
                                     </Box>
 
-                                    <Divider sx={{ borderColor: '#F3F4F6', mb: 2.5 }} />
+                                    {/* Informations personnelles */}
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography variant="subtitle1" sx={{
+                                            fontWeight: 600,
+                                            color: '#111827',
+                                            fontSize: '0.9375rem',
+                                            mb: 0.5,
+                                        }}>
+                                            Informations personnelles
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: '0.75rem' }}>
+                                            Ces informations ne peuvent pas être modifiées.
+                                        </Typography>
+                                    </Box>
 
-                                    {/* Info fields */}
-                                    <Stack spacing={2.5}>
-                                        <Box>
+                                    <Stack spacing={2}>
+                                        <Box sx={{
+                                            p: 2.5,
+                                            bgcolor: '#F9FAFB',
+                                            borderRadius: 3,
+                                            border: '1px solid #F3F4F6',
+                                        }}>
                                             <Typography variant="caption" sx={{
-                                                color: '#6B7280', fontWeight: 500, fontSize: '0.75rem',
-                                                textTransform: 'uppercase', letterSpacing: 0.5,
-                                                display: 'block', mb: 0.8,
+                                                color: '#9CA3AF',
+                                                fontWeight: 600,
+                                                fontSize: '0.6875rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: 0.5,
+                                                display: 'block',
+                                                mb: 1,
                                             }}>
                                                 Nom d'utilisateur
                                             </Typography>
                                             <Stack direction="row" alignItems="center" spacing={1.5}>
                                                 <Fingerprint sx={{ fontSize: 18, color: '#9CA3AF' }} />
-                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 500, fontSize: '0.875rem' }}>
+                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600, fontSize: '0.875rem' }}>
                                                     {user?.login || user?.username}
                                                 </Typography>
                                             </Stack>
                                         </Box>
 
-                                        <Box>
+                                        <Box sx={{
+                                            p: 2.5,
+                                            bgcolor: '#F9FAFB',
+                                            borderRadius: 3,
+                                            border: '1px solid #F3F4F6',
+                                        }}>
                                             <Typography variant="caption" sx={{
-                                                color: '#6B7280', fontWeight: 500, fontSize: '0.75rem',
-                                                textTransform: 'uppercase', letterSpacing: 0.5,
-                                                display: 'block', mb: 0.8,
+                                                color: '#9CA3AF',
+                                                fontWeight: 600,
+                                                fontSize: '0.6875rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: 0.5,
+                                                display: 'block',
+                                                mb: 1,
                                             }}>
                                                 Adresse email
                                             </Typography>
                                             <Stack direction="row" alignItems="center" spacing={1.5}>
                                                 <MailOutline sx={{ fontSize: 18, color: '#9CA3AF' }} />
-                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 500, fontSize: '0.875rem' }}>
+                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600, fontSize: '0.875rem' }}>
                                                     {user?.email || 'Non renseignée'}
                                                 </Typography>
                                             </Stack>
                                         </Box>
 
-                                        <Box>
+                                        <Box sx={{
+                                            p: 2.5,
+                                            bgcolor: '#F9FAFB',
+                                            borderRadius: 3,
+                                            border: '1px solid #F3F4F6',
+                                        }}>
                                             <Typography variant="caption" sx={{
-                                                color: '#6B7280', fontWeight: 500, fontSize: '0.75rem',
-                                                textTransform: 'uppercase', letterSpacing: 0.5,
-                                                display: 'block', mb: 0.8,
+                                                color: '#9CA3AF',
+                                                fontWeight: 600,
+                                                fontSize: '0.6875rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: 0.5,
+                                                display: 'block',
+                                                mb: 1,
                                             }}>
                                                 Rôle
                                             </Typography>
                                             <Stack direction="row" alignItems="center" spacing={1.5}>
-                                                <RoleIcon sx={{ fontSize: 18, color: rc.color }} />
-                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 500, fontSize: '0.875rem' }}>
+                                                <RoleIcon sx={{ fontSize: 18, color: '#10B981' }} />
+                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600, fontSize: '0.875rem' }}>
                                                     {rc.label}
                                                 </Typography>
                                             </Stack>
@@ -284,151 +357,209 @@ export default function Profile() {
                     <Grid item xs={12} lg={7}>
                         <motion.div variants={itemVariants}>
                             <Paper elevation={0} sx={{
-                                borderRadius: 2, border: '1px solid #E5E7EB', bgcolor: '#fff', overflow: 'hidden',
+                                borderRadius: 4,
+                                bgcolor: '#fff',
+                                overflow: 'hidden',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                p: 3.5,
                             }}>
-                                <Box sx={{ p: 3 }}>
-                                    <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
-                                        <Lock sx={{ fontSize: 18, color: '#6B7280' }} />
+                                <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
+                                    <Box sx={{
+                                        p: 1,
+                                        bgcolor: '#EEF2FF',
+                                        borderRadius: 2,
+                                        display: 'flex',
+                                    }}>
+                                        <Lock sx={{ fontSize: 20, color: '#4F46E5' }} />
+                                    </Box>
+                                    <Box>
                                         <Typography variant="h6" sx={{
-                                            fontWeight: 600, color: '#111827', fontSize: '0.9375rem', letterSpacing: '-0.01em'
+                                            fontWeight: 700,
+                                            color: '#111827',
+                                            fontSize: '1rem',
                                         }}>
                                             Sécurité du compte
                                         </Typography>
-                                    </Stack>
-                                    <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.8125rem', mb: 2.5, ml: 3.8 }}>
-                                        Modifiez votre mot de passe
-                                    </Typography>
+                                        <Typography variant="body2" sx={{ color: '#9CA3AF', fontSize: '0.8125rem' }}>
+                                            Modifiez votre mot de passe
+                                        </Typography>
+                                    </Box>
+                                </Stack>
 
-                                    {success && (
-                                        <Alert severity="success" sx={{
-                                            mb: 2.5, borderRadius: 1.5,
-                                            bgcolor: '#ECFDF5', color: '#059669',
-                                            border: '1px solid #A7F3D0',
-                                            '& .MuiAlert-icon': { color: '#059669' },
-                                        }}>
-                                            Mot de passe mis à jour avec succès
-                                        </Alert>
-                                    )}
+                                {success && (
+                                    <Alert severity="success" sx={{
+                                        mt: 2,
+                                        borderRadius: 2,
+                                        bgcolor: '#ECFDF5',
+                                        color: '#059669',
+                                        border: '1px solid #A7F3D0',
+                                        '& .MuiAlert-icon': { color: '#059669' },
+                                        fontWeight: 500,
+                                    }}>
+                                        Mot de passe mis à jour avec succès
+                                    </Alert>
+                                )}
 
-                                    <Stack spacing={2.5}>
+                                <Stack spacing={3} sx={{ mt: 3 }}>
+                                    <Box>
+                                        <Typography variant="body2" sx={{ color: '#374151', fontWeight: 500, fontSize: '0.8125rem', mb: 1 }}>
+                                            Mot de passe actuel
+                                        </Typography>
                                         <TextField
                                             fullWidth
                                             type={showOld ? 'text' : 'password'}
-                                            label="Mot de passe actuel"
+                                            placeholder="Entrez votre mot de passe actuel"
                                             value={pwdForm.oldPassword}
                                             onChange={e => setPwdForm({ ...pwdForm, oldPassword: e.target.value })}
-                                            placeholder="Entrez votre mot de passe actuel"
                                             InputProps={{
+                                                startAdornment: (
+                                                    <Lock sx={{ fontSize: 18, color: '#9CA3AF', mr: 1 }} />
+                                                ),
                                                 endAdornment: (
                                                     <IconButton onClick={() => setShowOld(!showOld)} size="small" sx={{ color: '#9CA3AF' }}>
                                                         {showOld ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                                                     </IconButton>
                                                 ),
                                                 sx: {
-                                                    borderRadius: 2,
+                                                    borderRadius: 3,
                                                     bgcolor: '#F9FAFB',
                                                     fontSize: '0.875rem',
-                                                    '& fieldset': { borderColor: '#E5E7EB', transition: 'all 0.2s' },
+                                                    '& fieldset': { borderColor: '#E5E7EB' },
                                                     '&:hover fieldset': { borderColor: '#D1D5DB' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#4F46E5', borderWidth: '1.5px' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#4F46E5' },
                                                 },
                                             }}
-                                            InputLabelProps={{
-                                                sx: { color: '#6B7280', fontSize: '0.8125rem', fontWeight: 500 },
-                                            }}
                                         />
+                                    </Box>
 
+                                    <Box>
+                                        <Typography variant="body2" sx={{ color: '#374151', fontWeight: 500, fontSize: '0.8125rem', mb: 1 }}>
+                                            Nouveau mot de passe
+                                        </Typography>
                                         <TextField
                                             fullWidth
                                             type={showNew ? 'text' : 'password'}
-                                            label="Nouveau mot de passe"
+                                            placeholder="Minimum 6 caractères"
                                             value={pwdForm.newPassword}
                                             onChange={e => setPwdForm({ ...pwdForm, newPassword: e.target.value })}
-                                            placeholder="Minimum 6 caractères"
                                             InputProps={{
+                                                startAdornment: (
+                                                    <Lock sx={{ fontSize: 18, color: '#9CA3AF', mr: 1 }} />
+                                                ),
                                                 endAdornment: (
                                                     <IconButton onClick={() => setShowNew(!showNew)} size="small" sx={{ color: '#9CA3AF' }}>
                                                         {showNew ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                                                     </IconButton>
                                                 ),
                                                 sx: {
-                                                    borderRadius: 2,
+                                                    borderRadius: 3,
                                                     bgcolor: '#F9FAFB',
                                                     fontSize: '0.875rem',
-                                                    '& fieldset': { borderColor: '#E5E7EB', transition: 'all 0.2s' },
+                                                    '& fieldset': { borderColor: '#E5E7EB' },
                                                     '&:hover fieldset': { borderColor: '#D1D5DB' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#4F46E5', borderWidth: '1.5px' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#4F46E5' },
                                                 },
-                                            }}
-                                            InputLabelProps={{
-                                                sx: { color: '#6B7280', fontSize: '0.8125rem', fontWeight: 500 },
                                             }}
                                         />
 
+                                        {/* Barre de force */}
+                                        {pwdForm.newPassword.length > 0 && (
+                                            <Box sx={{ mt: 1.5 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Box sx={{ flex: 1, display: 'flex', gap: 0.5 }}>
+                                                        {[0, 1, 2, 3, 4].map((i) => (
+                                                            <Box
+                                                                key={i}
+                                                                sx={{
+                                                                    flex: 1,
+                                                                    height: 3,
+                                                                    borderRadius: 1,
+                                                                    bgcolor: i < strength ? strengthColors[strength - 1] : '#E5E7EB',
+                                                                    transition: 'all 0.3s',
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </Box>
+                                                    <Typography variant="caption" sx={{
+                                                        color: strengthColors[strength - 1] || '#9CA3AF',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.75rem',
+                                                    }}>
+                                                        Force du mot de passe : {strengthLabels[strength - 1] || 'Très faible'}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        )}
+                                    </Box>
+
+                                    <Box>
+                                        <Typography variant="body2" sx={{ color: '#374151', fontWeight: 500, fontSize: '0.8125rem', mb: 1 }}>
+                                            Confirmer le mot de passe
+                                        </Typography>
                                         <TextField
                                             fullWidth
                                             type={showConfirm ? 'text' : 'password'}
-                                            label="Confirmer le mot de passe"
+                                            placeholder="Répétez le mot de passe"
                                             value={pwdForm.confirm}
                                             onChange={e => setPwdForm({ ...pwdForm, confirm: e.target.value })}
-                                            placeholder="Répétez le mot de passe"
                                             error={pwdForm.confirm.length > 0 && pwdForm.newPassword !== pwdForm.confirm}
                                             helperText={
                                                 pwdForm.confirm.length > 0
                                                     ? pwdForm.newPassword === pwdForm.confirm
-                                                        ? 'Mots de passe identiques'
-                                                        : 'Les mots de passe ne correspondent pas'
+                                                        ? '✓ Les mots de passe correspondent'
+                                                        : '✗ Les mots de passe ne correspondent pas'
                                                     : ''
                                             }
                                             FormHelperTextProps={{
                                                 sx: {
                                                     color: pwdForm.newPassword === pwdForm.confirm && pwdForm.confirm.length > 0 ? '#059669' : '#DC2626',
-                                                    fontWeight: 500, fontSize: '0.75rem', ml: 0,
+                                                    fontWeight: 500,
+                                                    fontSize: '0.75rem',
                                                 }
                                             }}
                                             InputProps={{
+                                                startAdornment: (
+                                                    <Lock sx={{ fontSize: 18, color: '#9CA3AF', mr: 1 }} />
+                                                ),
                                                 endAdornment: (
                                                     <IconButton onClick={() => setShowConfirm(!showConfirm)} size="small" sx={{ color: '#9CA3AF' }}>
                                                         {showConfirm ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                                                     </IconButton>
                                                 ),
                                                 sx: {
-                                                    borderRadius: 2,
+                                                    borderRadius: 3,
                                                     bgcolor: '#F9FAFB',
                                                     fontSize: '0.875rem',
-                                                    '& fieldset': { borderColor: '#E5E7EB', transition: 'all 0.2s' },
+                                                    '& fieldset': { borderColor: '#E5E7EB' },
                                                     '&:hover fieldset': { borderColor: '#D1D5DB' },
-                                                    '&.Mui-focused fieldset': { borderColor: '#4F46E5', borderWidth: '1.5px' },
+                                                    '&.Mui-focused fieldset': { borderColor: '#4F46E5' },
                                                 },
                                             }}
-                                            InputLabelProps={{
-                                                sx: { color: '#6B7280', fontSize: '0.8125rem', fontWeight: 500 },
-                                            }}
                                         />
-                                    </Stack>
-
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-                                        <Button
-                                            variant="contained"
-                                            onClick={handleChangePassword}
-                                            disabled={pwdLoading}
-                                            startIcon={!pwdLoading && <Save sx={{ fontSize: 18 }} />}
-                                            sx={{
-                                                bgcolor: '#4F46E5',
-                                                '&:hover': { bgcolor: '#4338CA' },
-                                                '&:disabled': { bgcolor: '#C7D2FE', color: '#fff' },
-                                                borderRadius: 2,
-                                                textTransform: 'none',
-                                                fontWeight: 500,
-                                                fontSize: '0.8125rem',
-                                                px: 3,
-                                                py: 0.9,
-                                                boxShadow: 'none',
-                                            }}
-                                        >
-                                            {pwdLoading ? 'Enregistrement...' : 'Enregistrer'}
-                                        </Button>
                                     </Box>
+                                </Stack>
+
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleChangePassword}
+                                        disabled={pwdLoading || !pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirm || pwdForm.newPassword !== pwdForm.confirm}
+                                        startIcon={!pwdLoading && <Save sx={{ fontSize: 18 }} />}
+                                        sx={{
+                                            bgcolor: '#6366F1',
+                                            '&:hover': { bgcolor: '#4F46E5' },
+                                            '&:disabled': { bgcolor: '#C7D2FE', color: '#fff' },
+                                            borderRadius: 3,
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            fontSize: '0.875rem',
+                                            px: 4,
+                                            py: 1.2,
+                                            boxShadow: 'none',
+                                        }}
+                                    >
+                                        {pwdLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                                    </Button>
                                 </Box>
                             </Paper>
                         </motion.div>
@@ -445,7 +576,7 @@ export default function Profile() {
                 <Alert
                     severity={snack.severity}
                     onClose={() => setSnack({ ...snack, open: false })}
-                    sx={{ borderRadius: 2, fontSize: '0.8125rem' }}
+                    sx={{ borderRadius: 2, fontSize: '0.8125rem', fontWeight: 500 }}
                 >
                     {snack.msg}
                 </Alert>

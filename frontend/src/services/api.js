@@ -1,31 +1,79 @@
 import axios from 'axios';
 
+const API_BASE = import.meta?.env?.REACT_APP_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:8081/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8081/api',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  // Envoie les cookies avec chaque requête (pour migration future vers HttpOnly cookies)
+  withCredentials: true,
+  // Timeout : évite les requêtes suspendues indéfiniment
+  timeout: 30000,
 });
 
 let logoutCallback = null;
 export const setLogoutCallback = (cb) => { logoutCallback = cb; };
 
+// ── Token en mémoire (plus sécurisé que localStorage) ──────────────────────
+// localStorage est accessible par tout JS de la page (XSS).
+// Une variable module n'est accessible que par ce code-ci.
+let inMemoryToken = null;
+
+export const setToken = (token) => {
+  inMemoryToken = token;
+  // Garder aussi dans sessionStorage (onglet courant seulement, pas persisté entre onglets)
+  // JAMAIS dans localStorage pour un token JWT d'auth
+  if (token) {
+    sessionStorage.setItem('_t', token);
+  } else {
+    sessionStorage.removeItem('_t');
+  }
+};
+
+export const getToken = () => {
+  // Restaurer depuis sessionStorage au rechargement de page
+  if (!inMemoryToken) {
+    inMemoryToken = sessionStorage.getItem('_t') || null;
+  }
+  return inMemoryToken;
+};
+
+export const clearToken = () => {
+  inMemoryToken = null;
+  sessionStorage.removeItem('_t');
+  // Nettoyage ancienne clé localStorage si elle existait
+  localStorage.removeItem('token');
+};
+
+// ── Intercepteur requête : injecte le token ─────────────────────────────────
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  // Retirer les headers dangereux envoyés par le code legacy
+  delete config.headers['X-Forwarded-For'];
   return config;
 });
 
+// ── Intercepteur réponse : gestion globale des erreurs ──────────────────────
 api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('token');
-      if (logoutCallback) logoutCallback();
-      else window.location.href = '/login';
+    (res) => res,
+    (err) => {
+      if (err.response?.status === 401) {
+        clearToken();
+        if (logoutCallback) logoutCallback();
+        else window.location.href = '/login';
+      }
+      // Ne pas exposer les détails d'erreur serveur au frontend
+      if (err.response?.status >= 500) {
+        console.error('Erreur serveur:', err.response?.status);
+      }
+      return Promise.reject(err);
     }
-    return Promise.reject(err);
-  }
 );
 
+// ── Services ─────────────────────────────────────────────────────────────────
 export const formationService = {
   getAll: (annee) => api.get('/formations', { params: annee ? { annee } : {} }),
   getById: (id) => api.get(`/formations/${id}`),
@@ -96,10 +144,10 @@ export const statsService = {
 };
 
 export const authService = {
-  changePassword: (oldPassword, newPassword) => api.post('/auth/change-password', {
-    oldPassword,
-    newPassword,
-  }),
+  login: (username, password) => api.post('/auth/login', { username, password }),
+  logout: () => api.post('/auth/logout').finally(() => clearToken()),
+  changePassword: (oldPassword, newPassword) =>
+      api.post('/auth/change-password', { oldPassword, newPassword }),
 };
 
 export const adminService = {

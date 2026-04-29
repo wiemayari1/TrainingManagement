@@ -1,8 +1,8 @@
 package com.isi.gf.config;
 
 import com.isi.gf.service.UserDetailsServiceImpl;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,16 +33,10 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
-    @Autowired
-    private RateLimitFilter rateLimitFilter;
-
-    // ✅ FIX 3 — CORS depuis variable d'environnement
-    @Value("${app.cors.allowed-origins:http://localhost:3000}")
-    private String allowedOriginsRaw;
-
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // Strength 12 (au lieu du défaut 10) — plus résistant au brute force
+        return new BCryptPasswordEncoder(12);
     }
 
     @Bean
@@ -61,44 +55,58 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // ── CORS ─────────────────────────────────────────────────────
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // ── CSRF désactivé (API stateless JWT) ───────────────────────
                 .csrf(csrf -> csrf.disable())
-
-                // ── Sessions stateless ────────────────────────────────────────
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // ✅ FIX 4 — Headers de sécurité HTTP
+                // ── Headers de sécurité ──────────────────────────────
                 .headers(headers -> headers
                         // Empêche le clickjacking
                         .frameOptions(fo -> fo.deny())
-                        // Empêche le sniffing de type MIME
-                        .contentTypeOptions(cto -> {})
-                        // XSS protection navigateur
-                        .xssProtection(xss -> {})
-                        // ✅ HSTS : force HTTPS (activer uniquement en prod avec vrai TLS)
-                        // .httpStrictTransportSecurity(hsts -> hsts
-                        //     .includeSubDomains(true)
-                        //     .maxAgeInSeconds(31536000))
-                        // Referrer policy : ne pas leaker l'URL dans les requêtes externes
-                        .referrerPolicy(rp ->
-                                rp.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        // Content-Security-Policy
-                        .contentSecurityPolicy(csp ->
-                                csp.policyDirectives(
+                        // Empêche le MIME sniffing
+                        .contentTypeOptions(ct -> {})
+                        // Force HTTPS pendant 1 an (y compris sous-domaines)
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .maxAgeInSeconds(31536000)
+                                .includeSubDomains(true)
+                                .preload(true))
+                        // Content-Security-Policy : restreint les sources
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives(
                                         "default-src 'self'; " +
                                                 "script-src 'self'; " +
-                                                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-                                                "font-src 'self' https://fonts.gstatic.com; " +
+                                                "style-src 'self' 'unsafe-inline'; " +
                                                 "img-src 'self' data:; " +
-                                                "connect-src 'self';"
+                                                "font-src 'self'; " +
+                                                "connect-src 'self'; " +
+                                                "frame-ancestors 'none'; " +
+                                                "base-uri 'self'; " +
+                                                "form-action 'self'"
                                 ))
+                        // Referrer : ne pas envoyer l'URL complète
+                        .referrerPolicy(rp -> rp.policy(
+                                ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        // Permissions Policy : désactiver les APIs sensibles
+                        .permissionsPolicy(pp -> pp.policy(
+                                "geolocation=(), camera=(), microphone=(), payment=()"
+                        ))
                 )
 
-                // ── Autorisations ─────────────────────────────────────────────
+                // ── Gestion des erreurs d'authentification ──────────
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setContentType("application/json");
+                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            res.getWriter().write("{\"message\":\"Non authentifié\",\"success\":false}");
+                        })
+                        .accessDeniedHandler((req, res, e) -> {
+                            res.setContentType("application/json");
+                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            res.getWriter().write("{\"message\":\"Accès refusé\",\"success\":false}");
+                        })
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/public/**").permitAll()
@@ -106,12 +114,10 @@ public class SecurityConfig {
                         .requestMatchers("/stats/**").hasAnyRole("RESPONSABLE", "ADMIN")
                         .anyRequest().authenticated()
                 )
-
                 .authenticationProvider(authenticationProvider())
-
-                // ✅ FIX 2 — Rate limit filter avant le filtre JWT
-                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // Rate limiting filter avant le filtre JWT
+                .addFilterBefore(new RateLimitFilter(), JwtAuthFilter.class);
 
         return http.build();
     }
@@ -120,19 +126,22 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ FIX 3 — Origines depuis l'environnement (plusieurs séparées par virgule)
-        List<String> origins = Arrays.asList(allowedOriginsRaw.split(","));
-        configuration.setAllowedOrigins(origins);
+        // Lire les origines autorisées depuis la config (pas de wildcard)
+        String allowedOrigin = System.getenv("FRONTEND_URL");
+        if (allowedOrigin == null || allowedOrigin.isBlank()) {
+            allowedOrigin = "http://localhost:3000";
+        }
+        configuration.setAllowedOrigins(List.of(allowedOrigin));
 
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of(
-                "X-RateLimit-Limit",
-                "X-RateLimit-Remaining",
-                "Retry-After"
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // Headers explicites plutôt que wildcard
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization", "Content-Type", "Accept", "X-Requested-With"
         ));
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        // Cache preflight 30 min
+        configuration.setMaxAge(1800L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

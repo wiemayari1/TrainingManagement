@@ -1,0 +1,23 @@
+# ── Build / dépendances ──────────────────────────────────────
+backend/target/
+frontend/node_modules/
+frontend/package-lock.json
+frontend/build/
+
+# ── FICHIERS SECRETS — NE JAMAIS COMMITTER ───────────────────
+.env
+.env.local
+.env.production
+.env.staging
+backend/src/main/resources/application-prod.properties
+backend/src/main/resources/application-local.properties
+
+# ── Logs ────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── IDE ──────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+.DS_Store

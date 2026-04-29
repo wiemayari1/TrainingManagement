@@ -1,45 +1,37 @@
 package com.isi.gf.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * ✅ FIX 2 — Rate limiting sur /auth/login
- * Max 5 tentatives par minute par adresse IP.
- * Utilise Bucket4j avec un cache ConcurrentHashMap en mémoire.
- * En production avec plusieurs instances : remplacer par un cache Redis.
+ * Rate limiter simple en mémoire pour les endpoints sensibles.
+ * En production, utiliser Redis + Bucket4j pour la distribution.
+ *
+ * Limites :
+ *   - /auth/login          : 10 requêtes / minute / IP
+ *   - /auth/forgot-password: 3  requêtes / minute / IP
+ *   - Autres /auth/**      : 20 requêtes / minute / IP
  */
-@Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    @Value("${app.ratelimit.login.capacity:5}")
-    private int capacity;
+    private record RateEntry(AtomicInteger count, long windowStart) {}
 
-    @Value("${app.ratelimit.login.refill-tokens:5}")
-    private int refillTokens;
+    private final Map<String, RateEntry> loginAttempts      = new ConcurrentHashMap<>();
+    private final Map<String, RateEntry> forgotAttempts     = new ConcurrentHashMap<>();
+    private final Map<String, RateEntry> generalAuthAttempts = new ConcurrentHashMap<>();
 
-    @Value("${app.ratelimit.login.refill-minutes:1}")
-    private long refillMinutes;
-
-    // Cache IP → Bucket (TTL géré par éviction basique)
-    private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final long  WINDOW_MS        = 60_000L;
+    private static final int   LOGIN_LIMIT       = 10;
+    private static final int   FORGOT_LIMIT      = 3;
+    private static final int   GENERAL_AUTH_LIMIT = 20;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -47,57 +39,58 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Applique uniquement sur POST /api/auth/login
-        if (!isLoginEndpoint(request)) {
+        String path = request.getServletPath();
+        if (!path.startsWith("/auth/")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String ip = getClientIp(request);
-        Bucket bucket = buckets.computeIfAbsent(ip, this::createBucket);
 
-        if (bucket.tryConsume(1)) {
-            // Ajoute les headers de quota restant
-            long remaining = bucket.getAvailableTokens();
-            response.setHeader("X-RateLimit-Limit", String.valueOf(capacity));
-            response.setHeader("X-RateLimit-Remaining", String.valueOf(remaining));
-            filterChain.doFilter(request, response);
+        boolean limited;
+        if (path.equals("/auth/login")) {
+            limited = isRateLimited(ip, loginAttempts, LOGIN_LIMIT);
+        } else if (path.equals("/auth/forgot-password")) {
+            limited = isRateLimited(ip, forgotAttempts, FORGOT_LIMIT);
         } else {
-            // Trop de tentatives
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setHeader("X-RateLimit-Limit", String.valueOf(capacity));
-            response.setHeader("X-RateLimit-Remaining", "0");
-            response.setHeader("Retry-After", String.valueOf(refillMinutes * 60));
-            objectMapper.writeValue(response.getWriter(), Map.of(
-                "message", "Trop de tentatives de connexion. Réessayez dans " + refillMinutes + " minute(s).",
-                "success", false
-            ));
+            limited = isRateLimited(ip, generalAuthAttempts, GENERAL_AUTH_LIMIT);
         }
+
+        if (limited) {
+            response.setStatus(429);
+            response.setContentType("application/json");
+            response.setHeader("Retry-After", "60");
+            response.getWriter().write(
+                    "{\"message\":\"Trop de tentatives. Réessayez dans 60 secondes.\",\"success\":false}"
+            );
+            return;
+        }
+
+        filterChain.doFilter(request, response);
     }
 
-    private boolean isLoginEndpoint(HttpServletRequest request) {
-        return "POST".equalsIgnoreCase(request.getMethod())
-            && request.getRequestURI().endsWith("/auth/login");
+    private boolean isRateLimited(String ip, Map<String, RateEntry> store, int limit) {
+        long now = System.currentTimeMillis();
+        store.compute(ip, (key, entry) -> {
+            if (entry == null || now - entry.windowStart() > WINDOW_MS) {
+                return new RateEntry(new AtomicInteger(1), now);
+            }
+            entry.count().incrementAndGet();
+            return entry;
+        });
+        RateEntry entry = store.get(ip);
+        return entry != null && entry.count().get() > limit;
     }
 
-    private Bucket createBucket(String ip) {
-        Refill refill = Refill.intervally(refillTokens, Duration.ofMinutes(refillMinutes));
-        Bandwidth limit = Bandwidth.classic(capacity, refill);
-        return Bucket.builder().addLimit(limit).build();
-    }
-
-    /**
-     * Récupère l'IP réelle même derrière un reverse proxy (Nginx, etc.)
-     */
     private String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            return xForwardedFor.split(",")[0].trim();
+        // Respecte les proxies (nginx, load balancer)
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
         }
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isBlank()) {
-            return xRealIp.trim();
+        String xri = request.getHeader("X-Real-IP");
+        if (xri != null && !xri.isBlank()) {
+            return xri.trim();
         }
         return request.getRemoteAddr();
     }
