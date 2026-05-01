@@ -1,111 +1,103 @@
-# Application de Gestion de Formation Continue
+# 🎓 Application de Gestion de Formation Continue
 
 **Année Universitaire :** 2025/2026  
-**Institut :** Institut Supérieur d’Informatique (Université de Tunis El Manar)
+**Institut :** Institut Supérieur d’Informatique (Université de Tunis El Manar)  
+**Auteurs :** Wiem Ayari & Sakroufi Aya
 
-Une plateforme web moderne et performante pour la gestion centralisée des formations professionnelles continues au sein du centre de formation « Excllent Training » de la société « Green Building ». Cette application permet de suivre les formations, d'affecter des participants et formateurs, de gérer les budgets, et fournit un tableau de bord analytique avancé.
+Une plateforme web moderne, sécurisée et hautement performante conçue pour numériser et optimiser la gestion centralisée des formations professionnelles continues au sein du centre de formation **« Excellent Training »** de la société **« Green Building »**. 
+
+L'application élimine la gestion manuelle (fichiers Excel, courriers papiers) en automatisant le suivi des formations, l'affectation des participants et des formateurs, tout en offrant aux responsables une vue analytique pointue sur l'activité annuelle de l'entreprise.
+
+---
+
 ## 🚀 Fonctionnalités Principales
 
-- **Tableau de Bord Analytique** : Visualisation en temps réel des statistiques (KPIs, budgets, répartition par domaine).
-- **Gestion des Formations** : Création, planification et suivi des sessions de formation.
-- **Gestion des Acteurs** : Suivi des formateurs (internes/externes) et des participants.
-- **Gestion Administrative** : Configuration des structures, domaines, profils et employeurs.
-- **Sécurité et Authentification** : Système de connexion sécurisé (JWT) basé sur trois rôles (ADMIN, RESPONSABLE, USER) avec hachage BCrypt.
-- **Notifications Automatiques** : Envoi de courriels pour l'affectation à une formation et pour les rappels de début de formation, avec intégration dynamique de logo (CID).
+- **📊 Tableau de Bord Analytique Dynamique** : Visualisation en temps réel des statistiques clés (KPIs, suivi des budgets, répartition des formations par domaine et par structure) grâce à des graphiques interactifs.
+- **📅 Gestion Avancée des Formations** : Création, planification et gestion complète du cycle de vie des sessions de formation.
+- **👥 Gestion Complète des Acteurs** : Suivi précis des formateurs (internes et externes) et gestion du parcours de chaque participant.
+- **✉️ Système de Notifications Intelligentes par E-mail** : 
+  - Envoi automatique des informations de connexion (identifiant / mot de passe) aux nouveaux utilisateurs.
+  - Gestion sécurisée de la réinitialisation des accès via la fonctionnalité "Mot de passe oublié".
+  - Notification instantanée des participants lorsqu'ils sont affectés à une nouvelle formation.
+  - Envoi de rappels automatiques aux participants le jour même du début de leur formation (avec intégration dynamique du logo de l'entreprise).
+- **🔒 Sécurité Renforcée (RBAC & JWT)** : Système de connexion robuste sans état basé sur les rôles (ADMIN, RESPONSABLE, USER) avec chiffrement des mots de passe (BCrypt).
 
 ---
 
 ## 🛠 Technologies Utilisées
 
-### Backend
-- **Java & Spring Boot 3** : Cœur de l'application et API REST.
-- **Spring Security & JWT** : Authentification et autorisation sans état.
-- **Spring Data JPA & Hibernate** : ORM pour l'interaction avec la base de données.
+### ⚙️ Backend (API REST)
+- **Java & Spring Boot 3** : Framework robuste offrant d'excellentes performances.
+- **Spring Security & JWT** : Sécurisation complète des accès et des endpoints.
+- **Spring Data JPA & Hibernate** : Mapping objet-relationnel (ORM) strict pour garantir l'intégrité des données.
 - **MySQL** : Base de données relationnelle.
-- **Spring Mail** : Service d'envoi d'e-mails.
+- **Spring Mail** : Intégration SMTP pour le système de notifications par messagerie.
 
-### Frontend
-- **React.js** : Interface utilisateur réactive.
-- **Material UI (MUI)** : Composants graphiques et système de design.
-- **Framer Motion** : Animations et transitions fluides.
-- **Recharts** : Génération des graphiques analytiques (tableaux de bord).
-
----
-
-## 🛡️ Architecture de Sécurité
-
-La sécurité est une composante majeure de l'application, conçue autour des standards de l'industrie :
-- **Authentification Stateless (JWT)** : Utilisation de JSON Web Tokens pour gérer les sessions sans stocker d'état côté serveur, immunisant l'application contre les attaques CSRF classiques.
-- **Hachage Fort (BCrypt)** : Les mots de passe sont protégés par l'algorithme `BCryptPasswordEncoder` avant leur stockage en base de données.
-- **Contrôle d'Accès Basé sur les Rôles (RBAC)** : Les routes et les actions sont strictement verrouillées côté serveur (`@PreAuthorize`) selon trois niveaux de privilèges (USER, RESPONSABLE, ADMIN).
-- **Protection des Endpoints** : Les erreurs d'authentification (401) et d'autorisation (403) sont capturées pour renvoyer des réponses JSON génériques, empêchant la fuite d'informations techniques (StackTraces).
-
-*(Note : Pour une mise en production complète sur le web, la configuration actuelle est prête à être enveloppée par un certificat SSL/TLS (HTTPS) afin de chiffrer les données en transit sur le réseau).*
+### 🎨 Frontend (Interface Utilisateur)
+- **React.js** : Construction d'une Single Page Application (SPA) réactive.
+- **Material UI (MUI)** : Design system professionnel, ergonomique et accessible.
+- **Framer Motion** : Micro-animations fluides pour une expérience utilisateur très soignée ("Premium").
+- **Recharts** : Création des tableaux de bord analytiques dynamiques.
 
 ---
 
-## 💻 Guide d'Installation
+## 💻 Guide d'Installation (Windows)
 
-### Prérequis (Communs)
-- Node.js (v18+)
-- Java (JDK 17+)
-- Maven (3.8+)
-- MySQL (8.0+)
+Voici les étapes claires et détaillées pour exécuter le projet localement sous Windows.
 
-### 🪟 Déploiement sur Windows
+### 1️⃣ Prérequis
+Assurez-vous d'avoir installé les outils suivants sur votre machine :
+- **Node.js** (version 18 ou supérieure)
+- **Java JDK** (version 17 ou supérieure)
+- **MySQL Server** (version 8.0 ou supérieure)
+- Un IDE pour Java (ex: **IntelliJ IDEA**, **Eclipse** ou **VS Code**)
 
-1. **Base de données** :
-   - Ouvrez MySQL Workbench ou la ligne de commande MySQL.
-   - Exécutez le script `db/schema.sql` pour créer la base et les tables.
-   - Exécutez le script `db/data.sql` si vous souhaitez injecter les données de démonstration.
-2. **Backend (Spring Boot)** :
-   - Ouvrez le dossier `backend` dans votre IDE (IntelliJ IDEA ou Eclipse).
-   - Créez un fichier `.env` à la racine de `backend/` contenant vos variables (SMTP, mot de passe BDD, clé JWT).
-   - Lancez la classe `TrainingManagementApplication.java`.
-3. **Frontend (React)** :
-   - Ouvrez un terminal PowerShell dans le dossier `frontend`.
-   - Exécutez `npm install` pour installer les dépendances.
-   - Exécutez `npm start` pour démarrer l'application (http://localhost:3000).
+### 2️⃣ Configuration de la Base de Données
+1. Ouvrez votre client MySQL (ex: **MySQL Workbench** ou **phpMyAdmin** via WAMP/XAMPP).
+2. Ouvrez le fichier `db/schema.sql` situé dans le code source et exécutez tout son contenu. Cela créera la base `training_db` et l'ensemble des tables nécessaires.
+3. *(Optionnel)* Ouvrez et exécutez le fichier `db/data.sql` pour remplir la base avec un jeu de données de démonstration très riche.
 
-### 🐧 Déploiement sur Ubuntu / Linux
-
-1. **Base de données** :
-   ```bash
-   mysql -u root -p < db/schema.sql
-   mysql -u root -p < db/data.sql
+### 3️⃣ Démarrage du Backend (Spring Boot)
+1. Ouvrez le dossier `backend` dans votre IDE (ex: IntelliJ IDEA).
+2. À la racine du dossier `backend/`, créez un fichier nommé `.env` (sans nom avant le point) et ajoutez vos variables d'environnement (nécessaires pour la base de données et l'envoi des e-mails) :
+   ```env
+   DATASOURCE_URL=jdbc:mysql://localhost:3306/training_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+   MYSQL_USER=root
+   MYSQL_PASSWORD=votre_mot_de_passe_mysql
+   JWT_SECRET=CleSuperSecretePourJWTDeLApplicationFormationGreenBuilding
+   MAIL_USERNAME=votre_email@gmail.com
+   MAIL_PASSWORD=votre_mot_de_passe_d_application_gmail
    ```
-2. **Backend** :
+3. Laissez Maven télécharger les dépendances (cela peut prendre quelques minutes lors du premier lancement).
+4. Lancez l'application en exécutant la classe principale (`GfApplication.java`). Le serveur démarrera sur le port `8081`.
+
+### 4️⃣ Démarrage du Frontend (React)
+1. Ouvrez une invite de commande (Terminal ou PowerShell) et naviguez dans le dossier `frontend` :
    ```bash
-   cd backend
-   # Assurez-vous d'avoir créé le fichier .env
-   export $(cat .env | grep -v '^#' | xargs)
-   mvn spring-boot:run
+   cd chemin\vers\TrainingManagement\frontend
    ```
-3. **Frontend** :
+2. Installez les dépendances du projet en tapant :
    ```bash
-   cd frontend
    npm install
+   ```
+3. Démarrez l'interface utilisateur avec la commande :
+   ```bash
    npm start
    ```
+4. Votre navigateur s'ouvrira automatiquement à l'adresse `http://localhost:3000`. Vous pourrez vous connecter avec les comptes de démonstration (ex: `admin` / `password123`).
 
 ---
 
-## 🔮 Perspectives d'Évolution
+## 🛡️ Architecture de Sécurité et Validations
 
-- **Déploiement Cloud / Conteneurisation** : Dockeriser l'application (Dockerfile et docker-compose.yml) pour automatiser le déploiement sur le Cloud.
-- **Implémentation de HTTPS** : Sécuriser la communication réseau en intégrant un certificat SSL/TLS pour garantir le chiffrement des tokens JWT en production.
-- **Génération d'Attestations** : Ajout d'une fonctionnalité pour générer et télécharger automatiquement des attestations de réussite en format PDF pour les participants.
-- **Calendrier Interactif** : Intégrer un module calendrier global (type FullCalendar) pour visualiser rapidement la planification des sessions.
-
----
-
-## 🧗 Différentes Difficultés Rencontrées
-
-1. **Gestion des Redirections de Sécurité (CORS / 401)** : La distinction stricte entre les requêtes de validation (400) et de sécurité (401) par Spring Security causait des déconnexions inattendues côté client. Cela a nécessité un ajustement fin des filtres JWT et de la configuration de sécurité.
-2. **Contraintes et Cohérence de la Base de Données** : Assurer la cohérence des données tout au long du développement (particulièrement entre les champs optionnels) en respectant les contraintes JPA, sans déclencher des ConstraintViolationExceptions.
-3. **Notifications par E-mail** : Gérer l'incorporation asynchrone des ressources multimédias (comme le logo) directement au sein du corps du courriel (Content-ID inline) pour éviter les blocages des boîtes de messagerie et assurer un affichage professionnel.
-4. **Tableau de Bord Dynamique** : Refondre l'intégration des statistiques pour passer d'un système statique à une restitution 100% en temps réel, impliquant une gestion fine des jointures SQL et de la structuration des données sur Recharts.
+La sécurité a été conçue pour répondre aux plus hauts standards académiques et industriels :
+- **Validations strictes (`@Valid`)** : Toutes les données entrantes (ex: création d'un utilisateur ou d'une formation) sont scrupuleusement vérifiées côté backend avant l'insertion en base, garantissant ainsi une parfaite fiabilité des données (conformément au cahier des charges).
+- **Protection des accès** : Chaque action de l'API est filtrée (`@PreAuthorize`). L'Administrateur a les pleins pouvoirs, le Responsable gère l'analytique et l'évaluation, et le simple Utilisateur gère le fonctionnel opérationnel (Formations, Participants).
 
 ---
 
-**Auteurs** : Wiem Ayari & Sakroufi Aya
+## 🧗 Défis Techniques Relevés
+
+1. **Intégration du système d'E-mailing complet** : Développer un mécanisme robuste pour notifier les acteurs de manière proactive (informations de connexion, mots de passe oubliés, alertes de formation) avec des modèles de courriels professionnels intégrant des images incrustées.
+2. **Analytique en Temps Réel** : Remplacer l'ancien système manuel (Excel) par des graphiques interactifs qui lisent dynamiquement les données relationnelles complexes de la base.
+3. **Sécurité et CORS** : Gestion approfondie des filtres JWT pour bloquer correctement les accès non autorisés (401/403) sans rompre la communication entre le front-end React et l'API Spring Boot.
