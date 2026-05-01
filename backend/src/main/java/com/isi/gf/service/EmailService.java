@@ -12,7 +12,9 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.core.io.FileSystemResource;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 
 @Service
@@ -101,9 +103,6 @@ public class EmailService {
             } catch (UnsupportedEncodingException e) {
                 helper.setFrom(fromAddress);
             }
-
-import org.springframework.core.io.FileSystemResource;
-import java.io.File;
 
             helper.setTo(to);
             helper.setSubject(subject);
