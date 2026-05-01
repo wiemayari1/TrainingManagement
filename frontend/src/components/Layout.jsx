@@ -370,7 +370,7 @@ export default function Layout() {
                         color: '#0F172A',
                         fontSize: '0.95rem',
                     }}>
-                        {menuItems.find(m => m.path && isActive(m.path))?.label || 'Tableau de bord'}
+                        {isProfilePage ? 'Mon Profil' : (menuItems.find(m => m.path && isActive(m.path))?.label || 'Tableau de bord')}
                     </Typography>
 
                     <Box
