@@ -168,7 +168,7 @@ public class EmailService {
                     <tr>
                       <td style="background:linear-gradient(135deg,#312E81,#4C1D95);
                                  padding:36px 40px;text-align:center;">
-                        <div style="display:inline-block;background:rgba(255,255,255,0.15);
+                        <div style="display:inline-block;background:#ffffff;
                                     border-radius:12px;padding:14px 18px;margin-bottom:16px;">
                           %s
                         </div>
@@ -268,7 +268,7 @@ public class EmailService {
                     <tr>
                       <td style="background:linear-gradient(135deg,#047857,#065F46);
                                  padding:36px 40px;text-align:center;">
-                        <div style="display:inline-block;background:rgba(255,255,255,0.15);
+                        <div style="display:inline-block;background:#ffffff;
                                     border-radius:12px;padding:14px 18px;margin-bottom:16px;">
                           %s
                         </div>
@@ -401,7 +401,7 @@ public class EmailService {
                     <tr>
                       <td style="background:linear-gradient(135deg,#D97706,#B45309);
                                  padding:36px 40px;text-align:center;">
-                        <div style="display:inline-block;background:rgba(255,255,255,0.15);
+                        <div style="display:inline-block;background:#ffffff;
                                     border-radius:12px;padding:14px 18px;margin-bottom:16px;">
                           %s
                         </div>
@@ -548,7 +548,7 @@ public class EmailService {
                     <tr>
                       <td style="background:linear-gradient(135deg,#312E81,#4C1D95);
                                  padding:36px 40px;text-align:center;">
-                        <div style="display:inline-block;background:rgba(255,255,255,0.15);
+                        <div style="display:inline-block;background:#ffffff;
                                     border-radius:12px;padding:14px 18px;margin-bottom:16px;">
                           %s
                         </div>
