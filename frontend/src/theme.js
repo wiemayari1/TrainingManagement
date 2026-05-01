@@ -21,6 +21,7 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontSize: 15,
     h1: { fontWeight: 800 },
     h2: { fontWeight: 700 },
     h3: { fontWeight: 700 },
