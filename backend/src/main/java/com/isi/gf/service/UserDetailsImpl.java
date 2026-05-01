@@ -19,17 +19,17 @@ public class UserDetailsImpl implements UserDetails {
     private String email;
     @JsonIgnore
     private String password;
-    private Boolean firstLogin;
     private Collection<? extends GrantedAuthority> authorities;
+    private Boolean firstLogin;
 
     public UserDetailsImpl(Integer id, String username, String email, String password,
-                           Boolean firstLogin, Collection<? extends GrantedAuthority> authorities) {
+                           Collection<? extends GrantedAuthority> authorities, Boolean firstLogin) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
-        this.firstLogin = firstLogin;
         this.authorities = authorities;
+        this.firstLogin = firstLogin;
     }
 
     public static UserDetailsImpl build(User user) {
@@ -42,13 +42,9 @@ public class UserDetailsImpl implements UserDetails {
                 user.getUsername(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getFirstLogin(),
-                authorities);
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
+                authorities,
+                user.getFirstLogin()
+        );
     }
 
     public Integer getId() {
@@ -60,7 +56,12 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     public Boolean getFirstLogin() {
-        return firstLogin;
+        return firstLogin != null ? firstLogin : false;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return authorities;
     }
 
     @Override

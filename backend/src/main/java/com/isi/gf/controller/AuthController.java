@@ -31,21 +31,21 @@ import java.util.regex.Pattern;
 @RequestMapping("/auth")
 public class AuthController {
 
-    @Autowired AuthenticationManager    authenticationManager;
-    @Autowired UserRepo                 userRepository;
-    @Autowired RoleRepo                 roleRepository;
-    @Autowired PasswordResetTokenRepo   tokenRepository;
-    @Autowired PasswordEncoder          encoder;
-    @Autowired JwtUtils                 jwtUtils;
-    @Autowired EmailService             emailService;
+    @Autowired AuthenticationManager authenticationManager;
+    @Autowired UserRepo userRepository;
+    @Autowired RoleRepo roleRepository;
+    @Autowired PasswordResetTokenRepo tokenRepository;
+    @Autowired PasswordEncoder encoder;
+    @Autowired JwtUtils jwtUtils;
+    @Autowired EmailService emailService;
 
     private static final Pattern EMAIL_PATTERN =
-            Pattern.compile("^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$");
+            Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
 
-    // ── LOGIN ──────────────────────────────────────────────────────────────
+    // ========== LOGIN ==========
+
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        // Validation de base pour éviter les attaques par injection
         String username = loginRequest.getUsername();
         if (username == null || username.isBlank() || username.length() > 50) {
             return ResponseEntity.badRequest()
@@ -71,14 +71,14 @@ public class AuthController {
                     userDetails.getFirstLogin()
             ));
         } catch (Exception e) {
-            // Message générique : ne pas révéler si l'utilisateur existe
             return ResponseEntity.status(401).body(
                     new MessageResponse("Identifiants incorrects", false)
             );
         }
     }
 
-    // ── LOGOUT (invalide le token côté serveur) ────────────────────────────
+    // ========== LOGOUT ==========
+
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
@@ -86,34 +86,31 @@ public class AuthController {
             String token = header.substring(7);
             jwtUtils.blacklistToken(token);
         }
-        return ResponseEntity.ok(new MessageResponse("Déconnexion réussie", true));
+        return ResponseEntity.ok(new MessageResponse("Deconnexion reussie", true));
     }
 
-    // ── FORGOT PASSWORD ────────────────────────────────────────────────────
+    // ========== FORGOT PASSWORD ==========
+
     @PostMapping("/forgot-password")
     @Transactional
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        // Validation email
         if (request.getEmail() == null || request.getEmail().isBlank()) {
-            // Réponse identique que l'email existe ou non (timing attack mitigation)
             return ResponseEntity.ok(new MessageResponse(
-                    "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
+                    "Si cet email existe, vous recevrez un lien de reinitialisation.", true));
         }
 
         String email = request.getEmail().trim().toLowerCase();
 
-        // Validation format email
         if (!EMAIL_PATTERN.matcher(email).matches() || email.length() > 100) {
             return ResponseEntity.ok(new MessageResponse(
-                    "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
+                    "Si cet email existe, vous recevrez un lien de reinitialisation.", true));
         }
 
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
-            // Délai simulé pour limiter l'énumération d'emails (timing-safe)
             try { Thread.sleep(200); } catch (InterruptedException ignored) {}
             return ResponseEntity.ok(new MessageResponse(
-                    "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
+                    "Si cet email existe, vous recevrez un lien de reinitialisation.", true));
         }
 
         User user = userOpt.get();
@@ -135,10 +132,11 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(new MessageResponse(
-                "Si cet email existe, vous recevrez un lien de réinitialisation.", true));
+                "Si cet email existe, vous recevrez un lien de reinitialisation.", true));
     }
 
-    // ── VERIFY RESET TOKEN ─────────────────────────────────────────────────
+    // ========== VERIFY RESET TOKEN ==========
+
     @GetMapping("/reset-password/verify")
     public ResponseEntity<?> verifyResetToken(@RequestParam String token) {
         if (token == null || token.isBlank() || token.length() > 100) {
@@ -149,13 +147,14 @@ public class AuthController {
         PasswordResetToken resetToken = tokenRepository.findByToken(token).orElse(null);
         if (resetToken == null || !resetToken.isValid()) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Ce lien est invalide ou a expiré.", false));
+                    .body(new MessageResponse("Ce lien est invalide ou a expire.", false));
         }
 
         return ResponseEntity.ok(new MessageResponse("Token valide.", true));
     }
 
-    // ── RESET PASSWORD ─────────────────────────────────────────────────────
+    // ========== RESET PASSWORD ==========
+
     @PostMapping("/reset-password")
     @Transactional
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
@@ -167,17 +166,17 @@ public class AuthController {
         String newPwd = request.getPassword();
         if (newPwd == null || newPwd.length() < 8) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Le mot de passe doit contenir au moins 8 caractères.", false));
+                    .body(new MessageResponse("Le mot de passe doit contenir au moins 8 caracteres.", false));
         }
         if (newPwd.length() > 128) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Mot de passe trop long (max 128 caractères).", false));
+                    .body(new MessageResponse("Mot de passe trop long (max 128 caracteres).", false));
         }
 
         PasswordResetToken resetToken = tokenRepository.findByToken(request.getToken()).orElse(null);
         if (resetToken == null || !resetToken.isValid()) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Ce lien est invalide ou a expiré.", false));
+                    .body(new MessageResponse("Ce lien est invalide ou a expire.", false));
         }
 
         User user = resetToken.getUser();
@@ -188,22 +187,23 @@ public class AuthController {
         resetToken.setUsed(true);
         tokenRepository.save(resetToken);
 
-        return ResponseEntity.ok(new MessageResponse("Mot de passe réinitialisé avec succès.", true));
+        return ResponseEntity.ok(new MessageResponse("Mot de passe reinitialise avec succes.", true));
     }
 
-    // ── CHANGE PASSWORD ────────────────────────────────────────────────────
+    // ========== CHANGE PASSWORD ==========
+
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request,
                                             HttpServletRequest httpRequest) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            return ResponseEntity.status(401).body(new MessageResponse("Non authentifié", false));
+            return ResponseEntity.status(401).body(new MessageResponse("Non authentifie", false));
         }
 
         String newPwd = request.getNewPassword();
         if (newPwd == null || newPwd.length() < 8) {
             return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Le mot de passe doit contenir au moins 8 caractères.", false));
+                    .body(new MessageResponse("Le mot de passe doit contenir au moins 8 caracteres.", false));
         }
         if (newPwd.length() > 128) {
             return ResponseEntity.badRequest()
@@ -212,10 +212,9 @@ public class AuthController {
 
         User user = userRepository.findByUsername(auth.getName()).orElse(null);
         if (user == null) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Utilisateur non trouvé", false));
+            return ResponseEntity.badRequest().body(new MessageResponse("Utilisateur non trouve", false));
         }
 
-        // Vérifier l'ancien mot de passe (sauf première connexion)
         if (!Boolean.TRUE.equals(user.getFirstLogin())) {
             if (request.getOldPassword() == null || request.getOldPassword().isBlank()) {
                 return ResponseEntity.badRequest()
@@ -227,7 +226,7 @@ public class AuthController {
             }
             if (newPwd.equals(request.getOldPassword())) {
                 return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Le nouveau mot de passe doit être différent de l'ancien.", false));
+                        .body(new MessageResponse("Le nouveau mot de passe doit etre different de l'ancien.", false));
             }
         }
 
@@ -235,16 +234,16 @@ public class AuthController {
         user.setFirstLogin(false);
         userRepository.save(user);
 
-        // Invalider le token actuel pour forcer une reconnexion
         String header = httpRequest.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             jwtUtils.blacklistToken(header.substring(7));
         }
 
-        return ResponseEntity.ok(new MessageResponse("Mot de passe changé avec succès. Veuillez vous reconnecter.", true));
+        return ResponseEntity.ok(new MessageResponse("Mot de passe change avec succes. Veuillez vous reconnecter.", true));
     }
 
-    // ── DTOs internes ──────────────────────────────────────────────────────
+    // ========== DTOs INTERNES ==========
+
     @lombok.Data
     public static class ChangePasswordRequest {
         private String oldPassword;
