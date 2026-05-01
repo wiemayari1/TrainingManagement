@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '../store/authStore';
+import { setToken } from '../services/api';
 import {
   Box, TextField, Button, Typography, Paper, Alert,
   InputAdornment, IconButton, LinearProgress, Avatar,
@@ -250,8 +252,22 @@ export function ResetPassword() {
       });
       const data = await res.json().catch(() => ({}));
 
-      if (res.ok && data.success) {
+      if (res.ok && data.token) {
+        setToken(data.token);
+        useAuthStore.setState({
+            user: {
+                id: data.id,
+                login: data.username,
+                email: data.email,
+                role: data.role || 'ROLE_USER',
+                firstLogin: data.firstLogin === true,
+            },
+            isAuthenticated: true,
+            error: null
+        });
         setSuccess(true);
+        // On redirige automatiquement après 2.5 secondes
+        setTimeout(() => navigate('/dashboard'), 2500);
       } else {
         setError(data.message || 'Erreur lors de la réinitialisation.');
         // Si le token a expiré entre-temps
@@ -372,9 +388,9 @@ export function ResetPassword() {
               {success ? (
                   <motion.div key="success" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                     <SuccessBox
-                        message="Mot de passe réinitialisé avec succès ! Vous pouvez maintenant vous connecter."
-                        onBack={() => navigate('/login')}
-                        backLabel="Se connecter"
+                        message="Mot de passe réinitialisé avec succès ! Connexion en cours..."
+                        onBack={() => navigate('/dashboard')}
+                        backLabel="Accéder au tableau de bord"
                     />
                   </motion.div>
               ) : (

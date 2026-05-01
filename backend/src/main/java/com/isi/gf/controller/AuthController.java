@@ -187,7 +187,23 @@ public class AuthController {
         resetToken.setUsed(true);
         tokenRepository.save(resetToken);
 
-        return ResponseEntity.ok(new MessageResponse("Mot de passe reinitialise avec succes.", true));
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(user.getLogin(), newPwd)
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateToken(authentication);
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        String role = userDetails.getAuthorities().iterator().next().getAuthority();
+
+        return ResponseEntity.ok(new JwtResponse(
+                jwt,
+                userDetails.getId(),
+                userDetails.getUsername(),
+                userDetails.getEmail(),
+                role,
+                userDetails.getFirstLogin()
+        ));
     }
 
     // ========== CHANGE PASSWORD ==========

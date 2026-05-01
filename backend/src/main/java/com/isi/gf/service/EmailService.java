@@ -109,9 +109,15 @@ public class EmailService {
             helper.setText(htmlContent, true);
 
             // Ajout du logo en pièce jointe intégrée (inline)
-            File logoFile = new File("frontend/public/assets/logo.png");
+            File logoFile = new File("../frontend/public/assets/logo.png");
+            if (!logoFile.exists()) {
+                logoFile = new File("frontend/public/assets/logo.png");
+            }
+            
             if (logoFile.exists()) {
                 helper.addInline("logo", new FileSystemResource(logoFile));
+            } else {
+                log.warn("Logo non trouve pour l'email aux chemins essayes. Chemin absolu actuel : " + logoFile.getAbsolutePath());
             }
 
             mailSender.send(message);
