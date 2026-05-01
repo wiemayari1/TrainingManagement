@@ -188,7 +188,7 @@ public class AuthController {
         tokenRepository.save(resetToken);
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getLogin(), newPwd)
+                new UsernamePasswordAuthenticationToken(user.getUsername(), newPwd)
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateToken(authentication);
