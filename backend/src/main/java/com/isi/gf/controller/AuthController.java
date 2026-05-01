@@ -234,12 +234,7 @@ public class AuthController {
         user.setFirstLogin(false);
         userRepository.save(user);
 
-        String header = httpRequest.getHeader("Authorization");
-        if (header != null && header.startsWith("Bearer ")) {
-            jwtUtils.blacklistToken(header.substring(7));
-        }
-
-        return ResponseEntity.ok(new MessageResponse("Mot de passe change avec succes. Veuillez vous reconnecter.", true));
+        return ResponseEntity.ok(new MessageResponse("Mot de passe change avec succes.", true));
     }
 
     // ========== DTOs INTERNES ==========

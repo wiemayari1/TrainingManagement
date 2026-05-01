@@ -345,6 +345,7 @@ export default function Layout() {
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: COLORS.pageBg }}>
             <AppBar position="fixed" sx={{
+                display: isProfilePage ? 'none' : 'flex',
                 width: { sm: `calc(100% - ${drawerWidth}px)` },
                 ml: { sm: `${drawerWidth}px` },
                 bgcolor: COLORS.headerBg,
@@ -529,7 +530,7 @@ export default function Layout() {
                 flexGrow: 1,
                 p: { xs: 2, sm: 3 },
                 width: { sm: `calc(100% - ${drawerWidth}px)` },
-                mt: '56px',
+                mt: isProfilePage ? 0 : '56px',
                 transition: 'width 0.2s',
             }}>
                 <Outlet />

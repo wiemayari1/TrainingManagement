@@ -98,8 +98,10 @@ export default function FirstLogin() {
 
       if (res.data.success) {
         setSuccess(true);
-        clearFirstLogin();
-        setTimeout(() => navigate('/dashboard'), 2000);
+        setTimeout(() => {
+          clearFirstLogin();
+          navigate('/dashboard');
+        }, 2000);
       } else {
         setError(res.data.message || 'Erreur lors du changement de mot de passe.');
       }

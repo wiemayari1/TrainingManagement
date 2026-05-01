@@ -108,12 +108,8 @@ export default function Profile() {
                 newPassword: form.newPassword,
             });
             if (res.data?.success) {
-                setSnack({ open: true, msg: 'Mot de passe modifie avec succes. Reconnectez-vous.', severity: 'success' });
+                setSnack({ open: true, msg: 'Mot de passe modifie avec succes.', severity: 'success' });
                 setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                setTimeout(() => {
-                    useAuthStore.getState().logout();
-                    navigate('/login');
-                }, 2500);
             } else {
                 setSnack({ open: true, msg: res.data?.message || 'Erreur', severity: 'error' });
             }
