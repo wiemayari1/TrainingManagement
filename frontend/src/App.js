@@ -10,8 +10,15 @@ import Formateurs from './pages/Formateurs';
 import Participants from './pages/Participants';
 import Stats from './pages/Stats';
 import Admin from './pages/Admin';
+import Users from './pages/Admin/Users';
+import Structures from './pages/Admin/Structures';
+import Domaines from './pages/Admin/Domaines';
+import Profils from './pages/Admin/Profils';
+import Employeurs from './pages/Admin/Employeurs';
 import FirstLogin from './pages/FirstLogin';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ForgotPassword, ResetPassword } from './pages/ForgotPassword';
+import Profile from './pages/Profile';
 
 function AppInitializer() {
     useEffect(() => {
@@ -26,6 +33,8 @@ function App() {
             <AppInitializer />
             <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 <Route
                     path="/first-login"
@@ -50,7 +59,15 @@ function App() {
                     <Route path="formateurs" element={<Formateurs />} />
                     <Route path="participants" element={<Participants />} />
                     <Route path="stats" element={<Stats />} />
-                    <Route path="admin" element={<Admin />} />
+                    <Route path="profile" element={<Profile />} />
+                    <Route path="admin" element={<Admin />}>
+                        <Route index element={<Navigate to="users" replace />} />
+                        <Route path="users" element={<Users />} />
+                        <Route path="structures" element={<Structures />} />
+                        <Route path="domaines" element={<Domaines />} />
+                        <Route path="profils" element={<Profils />} />
+                        <Route path="employeurs" element={<Employeurs />} />
+                    </Route>
                 </Route>
 
                 <Route path="*" element={<Navigate to="/login" replace />} />
