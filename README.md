@@ -74,6 +74,7 @@ Vous pouvez utiliser des générateurs en ligne (comme un générateur SHA-256),
    MYSQL_PASSWORD=votre_mot_de_passe_mysql
    JWT_SECRET=VotreCleSecreteJWTGenereeEtape2
    MAIL_USERNAME=votre_email@gmail.com
+   # Important : Utilisez un "Mot de passe d'application" (16 caractères) généré depuis la sécurité de votre compte Google, et non votre vrai mot de passe.
    MAIL_PASSWORD=votre_mot_de_passe_d_application_gmail
    ```
 3. Lancez l'application en exécutant la classe principale (`GfApplication.java`). Le serveur démarrera sur le port 8081.
