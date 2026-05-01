@@ -67,7 +67,7 @@ Vous pouvez utiliser des générateurs en ligne (comme un générateur SHA-256),
 
 **Backend (Spring Boot) :**
 1. Ouvrez le dossier `backend` dans votre IDE.
-2. À la racine du dossier `backend/`, créez un fichier nommé `.env` et ajoutez vos variables d'environnement :
+2. À la racine du dossier `backend/`, vous trouverez un fichier nommé `.env.example`. Renommez-le ou copiez-le en `.env` (sans nom avant le point) et mettez à jour vos variables d'environnement :
    ```env
    DATASOURCE_URL=jdbc:mysql://localhost:3306/training_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
    MYSQL_USER=root
@@ -104,8 +104,9 @@ Vous pouvez utiliser des générateurs en ligne (comme un générateur SHA-256),
    ```bash
    cd backend
    ```
-2. Créez le fichier `.env` avec les mêmes informations que pour Windows :
+2. Copiez le fichier `.env.example` vers `.env` et ajustez les variables avec les mêmes informations que pour Windows :
    ```bash
+   cp .env.example .env
    nano .env
    # Ajoutez vos variables et sauvegardez (Ctrl+O, Enter, Ctrl+X)
    ```
