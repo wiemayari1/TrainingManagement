@@ -44,19 +44,31 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/formateurs/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
-                        .requestMatchers("/api/participants/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
-                        .requestMatchers("/api/formations/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
-                        .requestMatchers("/api/inscriptions/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
-                        .requestMatchers("/api/domaines/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
-                        .requestMatchers("/api/structures/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
-                        .requestMatchers("/api/profils/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
-                        .requestMatchers("/api/employeurs/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
-                        .requestMatchers("/api/stats/**").hasAnyRole("ADMIN", "RESPONSABLE")
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/formateurs/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/participants/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/formations/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/inscriptions/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/domaines/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/structures/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/profils/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/employeurs/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/stats/**").hasAnyRole("ADMIN", "RESPONSABLE")
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setContentType("application/json");
+                            res.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                            res.getWriter().write("{\"message\":\"Non authentifié\",\"success\":false}");
+                        })
+                        .accessDeniedHandler((req, res, e) -> {
+                            res.setContentType("application/json");
+                            res.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                            res.getWriter().write("{\"message\":\"Accès refusé\",\"success\":false}");
+                        })
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
