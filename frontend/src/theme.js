@@ -21,13 +21,18 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    fontSize: 15,
+    fontSize: 16,
     h1: { fontWeight: 800 },
     h2: { fontWeight: 700 },
     h3: { fontWeight: 700 },
     h4: { fontWeight: 700 },
     h5: { fontWeight: 600 },
     h6: { fontWeight: 600 },
+    body1: { fontSize: '1.05rem', lineHeight: 1.6 },
+    body2: { fontSize: '0.95rem', lineHeight: 1.6 },
+    subtitle1: { fontSize: '1.1rem', fontWeight: 600 },
+    subtitle2: { fontSize: '1rem', fontWeight: 600 },
+    button: { fontSize: '0.95rem' },
   },
   shape: {
     borderRadius: 10,
@@ -70,6 +75,18 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.95rem',
+          padding: '16px',
+        },
+        head: {
+          fontWeight: 600,
+          color: '#475569',
         },
       },
     },
