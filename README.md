@@ -1,7 +1,9 @@
 # Application de Gestion de Formation Continue
 
-Une plateforme web moderne et performante pour la gestion centralisée des formations professionnelles continues. Cette application permet de suivre les formations, d'affecter des participants et formateurs, de gérer les budgets, et fournit un tableau de bord analytique avancé.
+**Année Universitaire :** 2025/2026  
+**Institut :** Institut Supérieur d’Informatique (Université de Tunis El Manar)
 
+Une plateforme web moderne et performante pour la gestion centralisée des formations professionnelles continues au sein du centre de formation « Excllent Training » de la société « Green Building ». Cette application permet de suivre les formations, d'affecter des participants et formateurs, de gérer les budgets, et fournit un tableau de bord analytique avancé.
 ## 🚀 Fonctionnalités Principales
 
 - **Tableau de Bord Analytique** : Visualisation en temps réel des statistiques (KPIs, budgets, répartition par domaine).
