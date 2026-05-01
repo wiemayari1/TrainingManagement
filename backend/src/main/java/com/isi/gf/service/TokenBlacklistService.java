@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * ✅ FIX 5 — Blacklist de tokens JWT révoqués (logout sécurisé).
  *
  * Implémentation en mémoire avec auto-nettoyage.
  * En production multi-instances : remplacer par Redis.

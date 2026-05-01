@@ -102,9 +102,18 @@ public class EmailService {
                 helper.setFrom(fromAddress);
             }
 
+import org.springframework.core.io.FileSystemResource;
+import java.io.File;
+
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
+
+            // Ajout du logo en pièce jointe intégrée (inline)
+            File logoFile = new File("frontend/public/assets/logo.png");
+            if (logoFile.exists()) {
+                helper.addInline("logo", new FileSystemResource(logoFile));
+            }
 
             mailSender.send(message);
 
@@ -124,12 +133,11 @@ public class EmailService {
      * Le fichier logo.png doit être dans le dossier frontend/public/assets/
      */
     private String logoBlock() {
-        String logoUrl = frontendUrl + "/assets/logo.png";
         return """
-            <img src="%s" width="48" height="48"
+            <img src="cid:logo" width="48" height="48"
                  style="display:block;margin:0 auto;border:0;"
                  alt="Excellent Training">
-            """.formatted(logoUrl);
+            """;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -485,17 +493,6 @@ public class EmailService {
                             %s
                           </p>
                         </div>
-
-                        <!-- Bouton CTA -->
-                        <div style="text-align:center;margin:28px 0;">
-                          <a href="%s"
-                             style="display:inline-block;padding:14px 36px;
-                                    background:linear-gradient(135deg,#F59E0B,#D97706);
-                                    color:#ffffff;text-decoration:none;border-radius:8px;
-                                    font-size:15px;font-weight:600;">
-                            Consulter sur la plateforme
-                          </a>
-                        </div>
                       </td>
                     </tr>
 
@@ -521,8 +518,7 @@ public class EmailService {
                 formation.getDuree() == null ? "Non renseignée" : formation.getDuree(),
                 formation.getLieu() == null ? "Non renseigné" : escapeHtml(formation.getLieu()),
                 formation.getDomaineLibelle() == null ? "Non renseigné" : escapeHtml(formation.getDomaineLibelle()),
-                message == null ? "" : escapeHtml(message),
-                dashboardUrl
+                message == null ? "" : escapeHtml(message)
         );
     }
 
@@ -650,17 +646,6 @@ public class EmailService {
                             </tr>
                           </table>
                         </div>
-
-                        <!-- Bouton CTA -->
-                        <div style="text-align:center;margin:28px 0;">
-                          <a href="%s"
-                             style="display:inline-block;padding:14px 36px;
-                                    background:linear-gradient(135deg,#6366F1,#8B5CF6);
-                                    color:#ffffff;text-decoration:none;border-radius:8px;
-                                    font-size:15px;font-weight:600;">
-                            Voir ma formation
-                          </a>
-                        </div>
                       </td>
                     </tr>
 
@@ -687,8 +672,7 @@ public class EmailService {
                 formation.getDuree() == null ? "Non renseignée" : formation.getDuree(),
                 formation.getLieu() == null ? "Non renseigné" : escapeHtml(formation.getLieu()),
                 formation.getDomaineLibelle() == null ? "Non renseigné" : escapeHtml(formation.getDomaineLibelle()),
-                formation.getFormateurNom() == null ? "Non renseigné" : escapeHtml(formation.getFormateurNom()),
-                dashboardUrl
+                formation.getFormateurNom() == null ? "Non renseigné" : escapeHtml(formation.getFormateurNom())
         );
     }
 

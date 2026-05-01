@@ -1,104 +1,109 @@
-# TrainingManagement - Corrections Complètes
+# Application de Gestion de Formation Continue
 
-## 🔴 PROBLÈME CRITIQUE : "Identifiants incorrects mais il existe déjà"
+Une plateforme web moderne et performante pour la gestion centralisée des formations professionnelles continues. Cette application permet de suivre les formations, d'affecter des participants et formateurs, de gérer les budgets, et fournit un tableau de bord analytique avancé.
 
-### Cause
-Les mots de passe dans `db/init.sql` sont stockés **EN CLAIR** (`'password123'`) mais Spring Security utilise `BCryptPasswordEncoder`.
+## 🚀 Fonctionnalités Principales
 
-### Solution
-Utilisez `db/init_corrected.sql` qui contient :
-- Hash BCrypt pour les mots de passe
-- Colonne `idRole` (compatible avec User.java JPA)
-- Toutes les données de démo (5 ans de formations)
-
-```bash
-mysql -u root -p < db/init_corrected.sql
-```
+- **Tableau de Bord Analytique** : Visualisation en temps réel des statistiques (KPIs, budgets, répartition par domaine).
+- **Gestion des Formations** : Création, planification et suivi des sessions de formation.
+- **Gestion des Acteurs** : Suivi des formateurs (internes/externes) et des participants.
+- **Gestion Administrative** : Configuration des structures, domaines, profils et employeurs.
+- **Sécurité et Authentification** : Système de connexion sécurisé (JWT) basé sur trois rôles (ADMIN, RESPONSABLE, USER) avec hachage BCrypt.
+- **Notifications Automatiques** : Envoi de courriels pour l'affectation à une formation et pour les rappels de début de formation, avec intégration dynamique de logo (CID).
 
 ---
 
-## 🔴 PROBLÈME : Unknown column 'u1_0.idRole'
+## 🛠 Technologies Utilisées
 
-### Cause
-Le fichier SQL original utilise `idRole` comme nom de colonne (dans `utilisateur` et `formation`), mais mon premier `init_corrected.sql` utilisait `role_id`.
+### Backend
+- **Java & Spring Boot 3** : Cœur de l'application et API REST.
+- **Spring Security & JWT** : Authentification et autorisation sans état.
+- **Spring Data JPA & Hibernate** : ORM pour l'interaction avec la base de données.
+- **MySQL** : Base de données relationnelle.
+- **Spring Mail** : Service d'envoi d'e-mails.
 
-### Solution
-Le nouveau `init_corrected.sql` utilise maintenant les bons noms de colonnes :
-- `idRole` (pas `role_id`)
-- `idDomaine`, `idFormateur`, `idStructure`, `idProfil`, `idEmployeur`, `idParticipant`
+### Frontend
+- **React.js** : Interface utilisateur réactive.
+- **Material UI (MUI)** : Composants graphiques et système de design.
+- **Framer Motion** : Animations et transitions fluides.
+- **Recharts** : Génération des graphiques analytiques (tableaux de bord).
 
 ---
 
-## Fichiers corrigés
+## 🛡️ Architecture de Sécurité
 
-### 🔴 CRITIQUES
-1. **frontend/src/App.js** — Fichier JSX vide → Routes complètes
-2. **backend/.../EmailService.java** — HTML au lieu de Java → Classe fonctionnelle
-3. **frontend/src/pages/Login.jsx** — Rendu tronqué → Formulaire complet
-4. **frontend/src/pages/Stats.jsx** — Rendu tronqué → 6 onglets fonctionnels
-5. **frontend/src/components/Layout.jsx** — Rendu tronqué → Sidebar responsive
-6. **frontend/src/pages/Dashboard.jsx** — Rendu tronqué → Dashboard avec graphiques
-7. **db/init_corrected.sql** — Mots de passe en clair → Hash BCrypt + colonnes compatibles JPA
+La sécurité est une composante majeure de l'application, conçue autour des standards de l'industrie :
+- **Authentification Stateless (JWT)** : Utilisation de JSON Web Tokens pour gérer les sessions sans stocker d'état côté serveur, immunisant l'application contre les attaques CSRF classiques.
+- **Hachage Fort (BCrypt)** : Les mots de passe sont protégés par l'algorithme `BCryptPasswordEncoder` avant leur stockage en base de données.
+- **Contrôle d'Accès Basé sur les Rôles (RBAC)** : Les routes et les actions sont strictement verrouillées côté serveur (`@PreAuthorize`) selon trois niveaux de privilèges (USER, RESPONSABLE, ADMIN).
+- **Protection des Endpoints** : Les erreurs d'authentification (401) et d'autorisation (403) sont capturées pour renvoyer des réponses JSON génériques, empêchant la fuite d'informations techniques (StackTraces).
 
-### 🟡 HAUTE
-8. **AuthController.java** — Validation null register
-9. **AdminController.java** — Vérification doublons updateUser
-10. **InscriptionController.java** — Vérification doublon update
-11. **JwtUtils.java** — Cast sécurisé getRoleFromToken
-12. **StatsController.java** — Suppression @CrossOrigin redondant
+*(Note : Pour une mise en production complète sur le web, la configuration actuelle est prête à être enveloppée par un certificat SSL/TLS (HTTPS) afin de chiffrer les données en transit sur le réseau).*
 
-### 🟢 MOYENNE
-13. **api.js** — Callback logout programmatique
-14. **authStore.js** — Méthode checkAuth()
-15. **FirstLogin.jsx** — Utilisation service api
-16. **ProtectedRoute.jsx** — Redirections corrigées
-17. **PasswordResetTokenRepo.java** — deleteAllExpired()
-18. **TokenCleanupService.java** — Nettoyage auto
-19. **application.properties** — Variables d'environnement
+---
 
-## Instructions
+## 💻 Guide d'Installation
 
-### 1. Recréer la base de données
-```bash
-cd ~/TrainingManagement
-mysql -u root -p < db/init_corrected.sql
-```
+### Prérequis (Communs)
+- Node.js (v18+)
+- Java (JDK 17+)
+- Maven (3.8+)
+- MySQL (8.0+)
 
-### 2. Vérifier la structure
-```bash
-mysql -u root -p -e "DESC training_db.utilisateur"
-```
-Doit afficher `idRole` (pas `role_id`).
+### 🪟 Déploiement sur Windows
 
-### 3. Vérifier les mots de passe
-```bash
-mysql -u root -p -e "SELECT username, LENGTH(password) FROM training_db.utilisateur"
-```
-Doit afficher `60` pour les 3 comptes.
+1. **Base de données** :
+   - Ouvrez MySQL Workbench ou la ligne de commande MySQL.
+   - Exécutez le script `db/schema.sql` pour créer la base et les tables.
+   - Exécutez le script `db/data.sql` si vous souhaitez injecter les données de démonstration.
+2. **Backend (Spring Boot)** :
+   - Ouvrez le dossier `backend` dans votre IDE (IntelliJ IDEA ou Eclipse).
+   - Créez un fichier `.env` à la racine de `backend/` contenant vos variables (SMTP, mot de passe BDD, clé JWT).
+   - Lancez la classe `TrainingManagementApplication.java`.
+3. **Frontend (React)** :
+   - Ouvrez un terminal PowerShell dans le dossier `frontend`.
+   - Exécutez `npm install` pour installer les dépendances.
+   - Exécutez `npm start` pour démarrer l'application (http://localhost:3000).
 
-### 4. Copier les fichiers corrigés
-Remplacez les fichiers existants par ceux du dossier `trainingmanagement-fixes`.
+### 🐧 Déploiement sur Ubuntu / Linux
 
-### 5. Ajouter @EnableScheduling
-```java
-@SpringBootApplication
-@EnableScheduling
-public class TrainingManagementApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(TrainingManagementApplication.class, args);
-    }
-}
-```
+1. **Base de données** :
+   ```bash
+   mysql -u root -p < db/schema.sql
+   mysql -u root -p < db/data.sql
+   ```
+2. **Backend** :
+   ```bash
+   cd backend
+   # Assurez-vous d'avoir créé le fichier .env
+   export $(cat .env | grep -v '^#' | xargs)
+   mvn spring-boot:run
+   ```
+3. **Frontend** :
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
 
-### 6. Lancer
-```bash
-cd backend && mvn clean install && mvn spring-boot:run
-cd frontend && npm start
-```
+---
 
-## Comptes démo (mot de passe: password123)
-| Login | Rôle |
-|-------|------|
-| admin | Administrateur |
-| responsable | Responsable |
-| user | Utilisateur |
+## 🔮 Perspectives d'Évolution
+
+- **Déploiement Cloud / Conteneurisation** : Dockeriser l'application (Dockerfile et docker-compose.yml) pour automatiser le déploiement sur le Cloud.
+- **Implémentation de HTTPS** : Sécuriser la communication réseau en intégrant un certificat SSL/TLS pour garantir le chiffrement des tokens JWT en production.
+- **Génération d'Attestations** : Ajout d'une fonctionnalité pour générer et télécharger automatiquement des attestations de réussite en format PDF pour les participants.
+- **Calendrier Interactif** : Intégrer un module calendrier global (type FullCalendar) pour visualiser rapidement la planification des sessions.
+
+---
+
+## 🧗 Différentes Difficultés Rencontrées
+
+1. **Gestion des Redirections de Sécurité (CORS / 401)** : La distinction stricte entre les requêtes de validation (400) et de sécurité (401) par Spring Security causait des déconnexions inattendues côté client. Cela a nécessité un ajustement fin des filtres JWT et de la configuration de sécurité.
+2. **Contraintes et Cohérence de la Base de Données** : Assurer la cohérence des données tout au long du développement (particulièrement entre les champs optionnels) en respectant les contraintes JPA, sans déclencher des ConstraintViolationExceptions.
+3. **Notifications par E-mail** : Gérer l'incorporation asynchrone des ressources multimédias (comme le logo) directement au sein du corps du courriel (Content-ID inline) pour éviter les blocages des boîtes de messagerie et assurer un affichage professionnel.
+4. **Tableau de Bord Dynamique** : Refondre l'intégration des statistiques pour passer d'un système statique à une restitution 100% en temps réel, impliquant une gestion fine des jointures SQL et de la structuration des données sur Recharts.
+
+---
+
+**Auteurs** : Wiem Ayari & Sakroufi Aya

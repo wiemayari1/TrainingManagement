@@ -100,7 +100,8 @@ export default function Layout() {
     };
 
     const menuItems = buildMenu();
-    const drawerWidth = collapsed ? DRAWER_MINI : DRAWER_FULL;
+    const isProfilePage = location.pathname === '/profile';
+    const drawerWidth = isProfilePage ? 0 : (collapsed ? DRAWER_MINI : DRAWER_FULL);
 
     const isActive = (path) =>
         location.pathname === path || location.pathname.startsWith(path + '/');
@@ -486,7 +487,8 @@ export default function Layout() {
                 </Toolbar>
             </AppBar>
 
-            <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
+            {!isProfilePage && (
+                <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
                 <Drawer
                     variant="temporary"
                     open={mobileOpen}
@@ -521,6 +523,7 @@ export default function Layout() {
                     {sidebarContent}
                 </Drawer>
             </Box>
+            )}
 
             <Box component="main" sx={{
                 flexGrow: 1,

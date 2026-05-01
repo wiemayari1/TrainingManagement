@@ -511,7 +511,7 @@ export default function Stats() {
             <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <Box sx={{
                     mb: 3, p: { xs: 2.5, md: 3.5 }, borderRadius: '20px',
-                    background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F1E3D 100%)',
+                    bgcolor: '#0F0E2E',
                     position: 'relative', overflow: 'hidden',
                 }}>
                     <Box sx={{ position: 'absolute', top: -60, right: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)' }} />
