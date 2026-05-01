@@ -42,21 +42,17 @@ function SimpleGreeting({ user }) {
     return (
         <motion.div {...fadeUp(0)} style={{ marginBottom: 24 }}>
             <Box sx={{ mb: 2 }}>
-                <Typography sx={{
-                    fontSize: '0.95rem',
+                <Typography variant="caption" sx={{
                     color: '#94A3B8',
-                    fontWeight: 500,
                     mb: 0.5,
                     textTransform: 'capitalize',
+                    display: 'block'
                 }}>
                     {date}
                 </Typography>
-                <Typography sx={{
-                    fontSize: '1.8rem',
-                    fontWeight: 800,
+                <Typography variant="h2" sx={{
                     color: '#0F172A',
                     letterSpacing: '-0.02em',
-                    lineHeight: 1.2,
                 }}>
                     {greeting}, {user?.login}
                 </Typography>
@@ -87,17 +83,17 @@ function FormationRow({ formation, index, onClick }) {
                     <School sx={{ fontSize: 18 }} />
                 </Avatar>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 600, fontSize: '1rem', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {formation.titre}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.3, flexWrap: 'wrap' }}>
-                        <Typography sx={{ fontSize: '0.9rem', color: '#94A3B8' }}>
+                        <Typography variant="caption" sx={{ color: '#94A3B8' }}>
                             {formation.domaineLibelle || '—'}
                         </Typography>
                         {formation.formateurNom && (
                             <>
                                 <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: '#CBD5E1' }} />
-                                <Typography sx={{ fontSize: '0.9rem', color: '#94A3B8' }}>
+                                <Typography variant="caption" sx={{ color: '#94A3B8' }}>
                                     {formation.formateurNom}
                                 </Typography>
                             </>
@@ -109,10 +105,10 @@ function FormationRow({ formation, index, onClick }) {
                         icon={<StatusIcon sx={{ fontSize: '14px !important' }} />}
                         label={cfg.label}
                         size="small"
-                        sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 600, fontSize: '0.8rem', height: 24 }}
+                        sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 600, fontSize: '0.75rem', height: 24 }}
                     />
                     {formation.nbParticipants > 0 && (
-                        <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8' }}>
+                        <Typography variant="caption" sx={{ color: '#94A3B8' }}>
                             {formation.nbParticipants} participant{formation.nbParticipants > 1 ? 's' : ''}
                         </Typography>
                     )}
@@ -177,7 +173,7 @@ export default function Dashboard() {
                         <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: '#EEF2FF', mx: 'auto', mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Assessment sx={{ color: '#6366F1', fontSize: 32 }} />
                         </Box>
-                        <Typography sx={{ color: '#64748B', fontSize: '1rem', mb: 3, maxWidth: 400, mx: 'auto' }}>
+                        <Typography variant="body1" sx={{ color: '#64748B', mb: 3, maxWidth: 400, mx: 'auto' }}>
                             Consultez les statistiques détaillées et les rapports d'activités du centre de formation Excellent Training.
                         </Typography>
                         <Button
@@ -185,7 +181,7 @@ export default function Dashboard() {
                             startIcon={<TrendingUp />}
                             onClick={() => navigate('/stats')}
                             sx={{
-                                borderRadius: 2.5, textTransform: 'none', fontWeight: 700, px: 4, py: 1.2,
+                                borderRadius: 2.5, px: 4, py: 1.2,
                                 background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: 'none',
                                 '&:hover': { background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 16px rgba(99,102,241,0.3)' },
                             }}
@@ -209,10 +205,10 @@ export default function Dashboard() {
                         <Card sx={{ borderRadius: 3, border: '1px solid #E2E8F0', boxShadow: 'none' }}>
                             <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Box>
-                                    <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#0F172A' }}>
+                                    <Typography variant="h4" sx={{ color: '#0F172A', mb: 0.5 }}>
                                         Formations récentes
                                     </Typography>
-                                    <Typography sx={{ fontSize: '0.9rem', color: '#94A3B8' }}>
+                                    <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block' }}>
                                         Dernières sessions de l'année {year}
                                     </Typography>
                                 </Box>
@@ -220,7 +216,7 @@ export default function Dashboard() {
                                     size="small"
                                     endIcon={<ArrowForward sx={{ fontSize: 16 }} />}
                                     onClick={() => navigate('/formations')}
-                                    sx={{ textTransform: 'none', fontSize: '0.95rem', color: '#6366F1', fontWeight: 600 }}
+                                    sx={{ color: '#6366F1' }}
                                 >
                                     Tout voir
                                 </Button>
@@ -229,12 +225,12 @@ export default function Dashboard() {
                                 {recentFormations.length === 0 ? (
                                     <Box sx={{ textAlign: 'center', py: 4, color: '#94A3B8' }}>
                                         <School sx={{ fontSize: 40, mb: 1, opacity: 0.4 }} />
-                                        <Typography sx={{ fontSize: '1rem' }}>Aucune formation pour {year}</Typography>
+                                        <Typography variant="body1">Aucune formation pour {year}</Typography>
                                         <Button
                                             size="small"
                                             startIcon={<Add />}
                                             onClick={() => navigate('/formations')}
-                                            sx={{ mt: 1.5, textTransform: 'none', color: '#6366F1', fontWeight: 600, fontSize: '0.95rem' }}
+                                            sx={{ mt: 1.5, color: '#6366F1' }}
                                         >
                                             Ajouter une formation
                                         </Button>
@@ -261,7 +257,7 @@ export default function Dashboard() {
                         <motion.div {...fadeUp(0.15)}>
                             <Card sx={{ borderRadius: 3, border: '1px solid #E2E8F0', boxShadow: 'none' }}>
                                 <Box sx={{ px: 2.5, pt: 2.5, pb: 1 }}>
-                                    <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#0F172A', mb: 1.5 }}>
+                                    <Typography variant="h4" sx={{ color: '#0F172A', mb: 1.5 }}>
                                         Actions rapides
                                     </Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -284,7 +280,7 @@ export default function Dashboard() {
                                                 <Box sx={{ p: 0.8, borderRadius: 1.5, bgcolor: action.bg }}>
                                                     <action.icon sx={{ color: action.color, fontSize: 20 }} />
                                                 </Box>
-                                                <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#0F172A', flex: 1 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', flex: 1 }}>
                                                     {action.label}
                                                 </Typography>
                                                 <Add sx={{ fontSize: 18, color: '#CBD5E1' }} />
@@ -300,7 +296,7 @@ export default function Dashboard() {
                             <motion.div {...fadeUp(0.2)}>
                                 <Card sx={{ borderRadius: 3, border: '1px solid #E2E8F0', boxShadow: 'none' }}>
                                     <Box sx={{ p: 2.5 }}>
-                                        <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#0F172A', mb: 1.8 }}>
+                                        <Typography variant="h4" sx={{ color: '#0F172A', mb: 1.8 }}>
                                             Répartition des formations
                                         </Typography>
                                         {Object.entries(STATUT_CONFIG).map(([key, cfg]) => {
@@ -311,11 +307,11 @@ export default function Dashboard() {
                                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.6 }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
                                                             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: cfg.color }} />
-                                                            <Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>{cfg.label}</Typography>
+                                                            <Typography variant="body2" sx={{ color: '#475569', fontWeight: 500 }}>{cfg.label}</Typography>
                                                         </Box>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <Typography sx={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A' }}>{count}</Typography>
-                                                            <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8' }}>({pct}%)</Typography>
+                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: '#0F172A' }}>{count}</Typography>
+                                                            <Typography variant="caption" sx={{ color: '#94A3B8' }}>({pct}%)</Typography>
                                                         </Box>
                                                     </Box>
                                                     <Box sx={{ height: 6, bgcolor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' }}>
@@ -351,10 +347,10 @@ export default function Dashboard() {
                                             <Assessment sx={{ color: '#6366F1', fontSize: 22 }} />
                                         </Box>
                                         <Box sx={{ flex: 1 }}>
-                                            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#0F172A' }}>
+                                            <Typography variant="body1" sx={{ fontWeight: 700, color: '#0F172A' }}>
                                                 Statistiques & Analyses
                                             </Typography>
-                                            <Typography sx={{ fontSize: '0.9rem', color: '#94A3B8' }}>
+                                            <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block' }}>
                                                 Rapports détaillés · 2022–2026
                                             </Typography>
                                         </Box>

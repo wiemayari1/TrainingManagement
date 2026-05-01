@@ -153,7 +153,9 @@ La sécurité est une composante majeure de l'application, conçue pour protége
 ## Perspectives d'Évolution
 
 Afin d'améliorer encore l'application dans le futur, voici quelques perspectives d'évolution envisageables :
+- **Espace Participant Indépendant** : Faire évoluer la plateforme vers une application complète de centre de formations en intégrant des comptes personnels et dédiés pour les participants et formateurs.
 - **Génération d'Attestations** : Création automatique d'attestations de présence et de réussite au format PDF pour les participants à la fin d'une formation.
 - **Déploiement Cloud / Docker** : Conteneuriser l'application avec Docker pour simplifier et automatiser son déploiement sur des serveurs cloud.
 - **Intégration d'un Calendrier Interactif** : Ajouter une vue calendrier (type FullCalendar) pour offrir une visualisation temporelle globale de toutes les sessions de formation planifiées.
-- **Espace Participant Indépendant** : Faire évoluer la plateforme vers une application complète de centre de formations en intégrant des comptes personnels et dédiés pour les participants et formateurs.
+- **Sécurité HTTPS & Certificat SSL** : Mettre en place un certificat SSL/TLS pour forcer le trafic en HTTPS et garantir un chiffrement de bout en bout des communications en production.
+
