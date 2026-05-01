@@ -2,130 +2,97 @@ package com.isi.gf.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
-import com.isi.gf.service.UserDetailsImpl;
+import com.isi.gf.model.User;
 
-import jakarta.annotation.PostConstruct;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Date;
 import java.util.stream.Collectors;
-import org.springframework.security.core.GrantedAuthority;
 
 @Component
 public class JwtUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
+
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration:3600000}")
+    @Value("${jwt.expiration}")
     private int jwtExpirationMs;
-
-    // Blacklist en mémoire — en production utiliser Redis avec TTL = expiration du token
-    private final Set<String> blacklistedTokens = Collections.newSetFromMap(new ConcurrentHashMap<>());
-
-    @PostConstruct
-    public void validateSecret() {
-        if (jwtSecret == null || jwtSecret.isBlank()) {
-            throw new IllegalStateException(
-                    "ERREUR SÉCURITÉ : JWT_SECRET non défini. " +
-                            "Définir la variable d'environnement JWT_SECRET (min 64 caractères)."
-            );
-        }
-        if (jwtSecret.length() < 64) {
-            throw new IllegalStateException(
-                    "ERREUR SÉCURITÉ : JWT_SECRET trop court (" + jwtSecret.length() +
-                            " chars). Minimum requis : 64 caractères. " +
-                            "Générer avec : openssl rand -base64 64"
-            );
-        }
-    }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(Authentication authentication) {
-        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
-        String tokenId = UUID.randomUUID().toString();
+    public String generateJwtToken(Authentication authentication) {
+        User userPrincipal = (User) authentication.getPrincipal();
+
+        String roles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
 
         return Jwts.builder()
-                .id(tokenId)
-                .subject(userPrincipal.getUsername())
+                .setSubject(userPrincipal.getUsername())
                 .claim("id", userPrincipal.getId())
                 .claim("email", userPrincipal.getEmail())
-                .claim("roles", userPrincipal.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
-                        .collect(Collectors.toList()))
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(getSigningKey(), Jwts.SIG.HS256)
+                .claim("roles", roles)
+                .claim("firstLogin", userPrincipal.isFirstLogin())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public String getUsernameFromToken(String token) {
-        return parseClaims(token).getSubject();
+    public String getUserNameFromJwtToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
     }
 
     public String getRoleFromToken(String token) {
-        Claims claims = parseClaims(token);
-        Object rolesObj = claims.get("roles");
-        if (rolesObj instanceof List<?> roles && !roles.isEmpty() && roles.get(0) instanceof String) {
-            return (String) roles.get(0);
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        String roles = claims.get("roles", String.class);
+
+        if (roles != null && !roles.isEmpty()) {
+            String firstRole = roles.split(",")[0].trim();
+            if (!firstRole.startsWith("ROLE_")) {
+                return "ROLE_" + firstRole;
+            }
+            return firstRole;
         }
         return "ROLE_USER";
     }
 
-    public String getTokenId(String token) {
-        return parseClaims(token).getId();
-    }
-
-    /** Invalide un token (logout). Le JTI est blacklisté jusqu'à expiration. */
-    public void blacklistToken(String token) {
+    public boolean validateJwtToken(String authToken) {
         try {
-            String jti = getTokenId(token);
-            if (jti != null) {
-                blacklistedTokens.add(jti);
-            }
-        } catch (Exception ignored) {}
-    }
-
-    public boolean validateToken(String authToken) {
-        try {
-            Claims claims = parseClaims(authToken);
-            // Vérifier la blacklist
-            String jti = claims.getId();
-            if (jti != null && blacklistedTokens.contains(jti)) {
-                return false;
-            }
+            Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(authToken);
             return true;
         } catch (SecurityException e) {
-            System.err.println("Signature JWT invalide: " + e.getMessage());
+            logger.error("Invalid JWT signature: {}", e.getMessage());
         } catch (MalformedJwtException e) {
-            System.err.println("Token JWT malformé: " + e.getMessage());
+            logger.error("Invalid JWT token: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
-            System.err.println("Token JWT expiré: " + e.getMessage());
+            logger.error("JWT token is expired: {}", e.getMessage());
         } catch (UnsupportedJwtException e) {
-            System.err.println("Token JWT non supporté: " + e.getMessage());
+            logger.error("JWT token is unsupported: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
-            System.err.println("Token JWT vide: " + e.getMessage());
+            logger.error("JWT claims string is empty: {}", e.getMessage());
         }
         return false;
-    }
-
-    private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-    }
-
-    public Claims getAllClaimsFromToken(String token) {
-        return parseClaims(token);
     }
 }

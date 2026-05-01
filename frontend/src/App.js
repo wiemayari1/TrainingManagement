@@ -1,98 +1,69 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-
-import theme from './theme';
 import { useAuthStore } from './store/authStore';
-import ProtectedRoute from './components/ProtectedRoute';
+
 import Layout from './components/Layout';
-
 import Login from './pages/Login';
-import FirstLogin from './pages/FirstLogin';
-import { ForgotPassword, ResetPassword } from './pages/ForgotPassword';
-
 import Dashboard from './pages/Dashboard';
 import Formations from './pages/Formations';
-import Participants from './pages/Participants';
 import Formateurs from './pages/Formateurs';
+import Participants from './pages/Participants';
+import Inscriptions from './pages/Inscriptions';
 import Stats from './pages/Stats';
-import Profile from './pages/Profile';
 import Admin from './pages/Admin';
-import AdminUsers from './pages/Admin/Users';
-import AdminStructures from './pages/Admin/Structures';
-import AdminDomaines from './pages/Admin/Domaines';
-import AdminProfils from './pages/Admin/Profils';
-import AdminEmployeurs from './pages/Admin/Employeurs';
+import FirstLogin from './pages/FirstLogin';
+import ProtectedRoute from './components/ProtectedRoute';
+
+function AppInitializer() {
+    useEffect(() => {
+        // CORRECTION CRITIQUE : Initialiser l'authentification au démarrage
+        // Cela restaure isAuthenticated depuis le token JWT en sessionStorage
+        useAuthStore.getState().initializeAuth();
+    }, []);
+    return null;
+}
 
 function App() {
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Router>
-                <AppRoutes />
-            </Router>
-        </ThemeProvider>
-    );
-}
-
-function AppRoutes() {
-    const { isAuthenticated, needsPasswordChange, initializeAuth } = useAuthStore();
-
-    useEffect(() => {
-        initializeAuth();
-    }, []);
-
-    if (!isAuthenticated) {
-        return (
+        <Router>
+            <AppInitializer />
             <Routes>
+                {/* Route publique */}
                 <Route path="/login" element={<Login />} />
-                <Route path="/first-login" element={<FirstLogin />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
+
+                {/* Route première connexion (changement mot de passe obligatoire) */}
+                <Route
+                    path="/first-login"
+                    element={
+                        <ProtectedRoute requireFirstLogin={true}>
+                            <FirstLogin />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* Routes protégées avec Layout */}
+                <Route
+                    path="/"
+                    element={
+                        <ProtectedRoute>
+                            <Layout />
+                        </ProtectedRoute>
+                    }
+                >
+                    <Route index element={<Navigate to="/dashboard" replace />} />
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="formations" element={<Formations />} />
+                    <Route path="formateurs" element={<Formateurs />} />
+                    <Route path="participants" element={<Participants />} />
+                    <Route path="inscriptions" element={<Inscriptions />} />
+                    <Route path="stats" element={<Stats />} />
+                    <Route path="admin" element={<Admin />} />
+                </Route>
+
+                {/* Redirection par défaut */}
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
-        );
-    }
-
-    if (needsPasswordChange()) {
-        return (
-            <Routes>
-                <Route path="/first-login" element={<FirstLogin />} />
-                <Route path="*" element={<Navigate to="/first-login" replace />} />
-            </Routes>
-        );
-    }
-
-    return (
-        <Routes>
-            <Route path="/" element={<Layout />}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="formations" element={<Formations />} />
-                <Route path="participants" element={<Participants />} />
-                <Route path="formateurs" element={<Formateurs />} />
-                <Route path="stats" element={
-                    <ProtectedRoute allowedRoles={['ROLE_RESPONSABLE', 'ROLE_ADMIN']}>
-                        <Stats />
-                    </ProtectedRoute>
-                } />
-                <Route path="profile" element={<Profile />} />
-                <Route path="admin" element={
-                    <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
-                        <Admin />
-                    </ProtectedRoute>
-                }>
-                    <Route index element={<Navigate to="users" replace />} />
-                    <Route path="users" element={<AdminUsers />} />
-                    <Route path="structures" element={<AdminStructures />} />
-                    <Route path="domaines" element={<AdminDomaines />} />
-                    <Route path="profils" element={<AdminProfils />} />
-                    <Route path="employeurs" element={<AdminEmployeurs />} />
-                </Route>
-            </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+        </Router>
     );
 }
 

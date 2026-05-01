@@ -1,17 +1,27 @@
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8081/api';
+const API_BASE =
+    import.meta?.env?.REACT_APP_API_URL ||
+    process.env.REACT_APP_API_URL ||
+    'http://localhost:8081/api';
 
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  // Envoie les cookies avec chaque requête (pour migration future vers HttpOnly cookies)
   withCredentials: true,
+  // Timeout : évite les requêtes suspendues indéfiniment
   timeout: 30000,
 });
 
 let logoutCallback = null;
-export const setLogoutCallback = (cb) => { logoutCallback = cb; };
+export const setLogoutCallback = (cb) => {
+  logoutCallback = cb;
+};
 
+// ── Token en mémoire + sessionStorage ──────────────────────────────────────
+// localStorage est accessible par tout JS de la page (XSS).
+// sessionStorage est limité à l'onglet courant et nettoyé à la fermeture.
 let inMemoryToken = null;
 
 export const setToken = (token) => {
@@ -24,6 +34,8 @@ export const setToken = (token) => {
 };
 
 export const getToken = () => {
+  // CORRECTION : Toujours recharger depuis sessionStorage si inMemoryToken est null
+  // Cela garantit que le token est disponible même après un refresh de page
   if (!inMemoryToken) {
     inMemoryToken = sessionStorage.getItem('_t') || null;
   }
@@ -33,48 +45,44 @@ export const getToken = () => {
 export const clearToken = () => {
   inMemoryToken = null;
   sessionStorage.removeItem('_t');
+  // Nettoyage ancienne clé localStorage si elle existait (compatibilité legacy)
   localStorage.removeItem('token');
 };
 
-api.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  delete config.headers['X-Forwarded-For'];
-  return config;
-});
+// ── Intercepteur requête : injecte le token Authorization ──────────────────
+api.interceptors.request.use(
+    (config) => {
+      // CORRECTION : Appeler getToken() qui recharge depuis sessionStorage si nécessaire
+      const token = getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      // Retirer les headers dangereux envoyés par le code legacy
+      delete config.headers['X-Forwarded-For'];
+      return config;
+    },
+    (error) => Promise.reject(error)
+);
 
+// ── Intercepteur réponse : gestion globale des erreurs ──────────────────────
 api.interceptors.response.use(
     (res) => res,
     (err) => {
+      // 401 Non authentifié → token invalide ou expiré
       if (err.response?.status === 401) {
-        const token = getToken();
-        if (token) {
-          try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            if (payload.exp * 1000 < Date.now()) {
-              clearToken();
-              if (logoutCallback) logoutCallback();
-              else window.location.href = '/login';
-            }
-          } catch {
-            clearToken();
-            if (logoutCallback) logoutCallback();
-            else window.location.href = '/login';
-          }
-        } else {
-          clearToken();
-          if (logoutCallback) logoutCallback();
-          else window.location.href = '/login';
-        }
+        clearToken();
+        if (logoutCallback) logoutCallback();
+        else window.location.href = '/login';
       }
+      // Ne pas exposer les détails d'erreur serveur au frontend
       if (err.response?.status >= 500) {
         console.error('Erreur serveur:', err.response?.status);
       }
       return Promise.reject(err);
     }
 );
+
+// ── Services API ───────────────────────────────────────────────────────────
 
 export const formationService = {
   getAll: (annee) => api.get('/formations', { params: annee ? { annee } : {} }),

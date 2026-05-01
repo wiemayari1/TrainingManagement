@@ -1,22 +1,22 @@
 package com.isi.gf.config;
 
-import com.isi.gf.service.UserDetailsServiceImpl;
-import jakarta.servlet.http.HttpServletResponse;
+import com.isi.gf.security.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,30 +25,47 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
-@EnableMethodSecurity
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
-
-    @Autowired
-    UserDetailsServiceImpl userDetailsService;
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
-
-    // Profil actif (dev / prod). Injecter via -Dspring.profiles.active=prod
-    @Value("${spring.profiles.active:dev}")
-    private String activeProfile;
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        // BCrypt cost=12 — bon équilibre sécurité/performance
-        return new BCryptPasswordEncoder(12);
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/formateurs/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/api/participants/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/api/formations/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/api/inscriptions/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/api/domaines/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/api/structures/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/api/profils/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/api/employeurs/**").hasAnyRole("USER", "ADMIN", "RESPONSABLE")
+                        .requestMatchers("/api/stats/**").hasAnyRole("ADMIN", "RESPONSABLE")
+                        .anyRequest().authenticated()
+                )
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
+    public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
@@ -56,105 +73,23 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                .headers(headers -> headers
-                        .frameOptions(fo -> fo.deny())
-                        .contentTypeOptions(ct -> {})
-                        .httpStrictTransportSecurity(hsts -> hsts
-                                .maxAgeInSeconds(31536000)
-                                .includeSubDomains(true)
-                                .preload(true))
-                        .contentSecurityPolicy(csp -> csp
-                                .policyDirectives(
-                                        "default-src 'self'; " +
-                                                "script-src 'self'; " +
-                                                "style-src 'self' 'unsafe-inline'; " +
-                                                "img-src 'self' data:; " +
-                                                "font-src 'self'; " +
-                                                "connect-src 'self'; " +
-                                                "frame-ancestors 'none'; " +
-                                                "base-uri 'self'; " +
-                                                "form-action 'self'"
-                                ))
-                        .referrerPolicy(rp -> rp.policy(
-                                ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        .permissionsPolicy(pp -> pp.policy(
-                                "geolocation=(), camera=(), microphone=(), payment=()"
-                        ))
-                )
-
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> {
-                            res.setContentType("application/json");
-                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            res.getWriter().write("{\"message\":\"Non authentifié\",\"success\":false}");
-                        })
-                        .accessDeniedHandler((req, res, e) -> {
-                            res.setContentType("application/json");
-                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            res.getWriter().write("{\"message\":\"Accès refusé\",\"success\":false}");
-                        })
-                )
-
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/public/**").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/stats/**").hasAnyRole("RESPONSABLE", "ADMIN")
-                        // ROLE_RESPONSABLE ne peut accéder qu'aux stats
-                        .requestMatchers("/formations/**", "/participants/**",
-                                "/formateurs/**", "/inscriptions/**",
-                                "/domaines/**", "/structures/**",
-                                "/profils/**", "/employeurs/**")
-                        .hasAnyRole("USER", "ADMIN")
-                        .anyRequest().authenticated()
-                )
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new RateLimitFilter(), JwtAuthFilter.class);
-
-        return http.build();
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        String origin = frontendUrl.trim();
-        boolean isDev = "dev".equalsIgnoreCase(activeProfile);
-
-        if (isDev) {
-            // En dev : accepter l'URL configurée + localhost:3000
-            configuration.setAllowedOrigins(List.of(origin, "http://localhost:3000"));
-        } else {
-            // En PRODUCTION : seulement l'URL exacte configurée, JAMAIS localhost
-            configuration.setAllowedOrigins(List.of(origin));
-        }
-
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "X-Requested-With",
-                "Origin",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
-        ));
-        configuration.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(1800L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

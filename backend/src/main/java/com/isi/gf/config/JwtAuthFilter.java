@@ -1,29 +1,34 @@
-package com.isi.gf.config;
+package com.isi.gf.security;
 
-import com.isi.gf.service.TokenBlacklistService;
+import com.isi.gf.config.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
+
     @Autowired
     private JwtUtils jwtUtils;
 
-    // ✅ FIX 5 — Injection de la blacklist
     @Autowired
-    private TokenBlacklistService tokenBlacklistService;
+    private UserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -32,29 +37,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             String jwt = parseJwt(request);
 
-            if (jwt != null && jwtUtils.validateToken(jwt)) {
+            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
+                String username = jwtUtils.getUserNameFromJwtToken(jwt);
 
-                // ✅ FIX 5 — Rejeter les tokens révoqués (logout sécurisé)
-                if (tokenBlacklistService.isRevoked(jwt)) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("{\"message\":\"Token révoqué, veuillez vous reconnecter.\",\"success\":false}");
-                    return;
-                }
-
-                String username = jwtUtils.getUsernameFromToken(jwt);
-                String role = jwtUtils.getRoleFromToken(jwt);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-                                username,
+                                userDetails,
                                 null,
-                                Collections.singletonList(new SimpleGrantedAuthority(role))
+                                userDetails.getAuthorities()
                         );
 
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request));
+
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                logger.debug("Authenticated user: {}, URI: {}", username, request.getRequestURI());
             }
         } catch (Exception e) {
-            logger.error("Erreur authentification JWT: " + e.getMessage(), e);
+            logger.error("Cannot set user authentication: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
@@ -62,7 +65,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private String parseJwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
-        if (headerAuth != null && headerAuth.startsWith("Bearer ")) {
+        if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
             return headerAuth.substring(7);
         }
         return null;

@@ -5,11 +5,15 @@ import { setToken, clearToken, getToken, setLogoutCallback } from '../services/a
 export const useAuthStore = create(
     persist(
         (set, get) => ({
+            // ── État ──────────────────────────────────────────────────────────────
             user: null,
             isAuthenticated: false,
             isLoading: false,
             error: null,
 
+            // ── Initialisation au démarrage ───────────────────────────────────────
+            // Appelée au chargement de l'application pour restaurer l'état depuis
+            // le token JWT stocké en sessionStorage
             initializeAuth: () => {
                 const token = getToken();
                 if (!token) {
@@ -23,18 +27,17 @@ export const useAuthStore = create(
                         set({ user: null, isAuthenticated: false });
                         return false;
                     }
+                    // Restaurer l'utilisateur depuis le token si pas déjà en mémoire
                     const currentUser = get().user;
                     if (!currentUser && payload.sub) {
-                        set({
-                            user: {
-                                id: payload.id || payload.sub,
-                                login: payload.sub,
-                                email: payload.email || '',
-                                role: payload.role || 'ROLE_USER',
-                                firstLogin: payload.firstLogin === true,
-                            },
-                            isAuthenticated: true,
-                        });
+                        const userFromToken = {
+                            id: payload.id || payload.sub,
+                            login: payload.sub,
+                            email: payload.email || '',
+                            role: payload.roles || payload.role || 'ROLE_USER',
+                            firstLogin: payload.firstLogin === true || payload.firstLogin === 'true',
+                        };
+                        set({ user: userFromToken, isAuthenticated: true });
                     } else {
                         set({ isAuthenticated: true });
                     }
@@ -46,6 +49,7 @@ export const useAuthStore = create(
                 }
             },
 
+            // ── Login ───────────────────────────────────────────────────────────
             login: async (login, password) => {
                 set({ isLoading: true, error: null });
                 try {
@@ -85,6 +89,7 @@ export const useAuthStore = create(
                 }
             },
 
+            // ── Logout ────────────────────────────────────────────────────────────
             logout: async () => {
                 try {
                     const token = getToken();
@@ -107,16 +112,37 @@ export const useAuthStore = create(
                 set({ user: null, isAuthenticated: false, error: null });
             },
 
+            // ── Clear first login flag ───────────────────────────────────────────
             clearFirstLogin: () => {
                 set(state => ({
                     user: state.user ? { ...state.user, firstLogin: false } : null,
                 }));
             },
 
+            // ── Check auth (validation token) ────────────────────────────────────
             checkAuth: () => {
-                return get().initializeAuth();
+                const token = getToken();
+                if (!token) {
+                    set({ user: null, isAuthenticated: false });
+                    return false;
+                }
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    if (payload.exp * 1000 < Date.now()) {
+                        clearToken();
+                        set({ user: null, isAuthenticated: false });
+                        return false;
+                    }
+                } catch {
+                    clearToken();
+                    set({ user: null, isAuthenticated: false });
+                    return false;
+                }
+                set({ isAuthenticated: true });
+                return true;
             },
 
+            // ── Helpers rôles ────────────────────────────────────────────────────
             hasRole: (role) => {
                 const { user } = get();
                 if (!user) return false;
@@ -135,18 +161,22 @@ export const useAuthStore = create(
                 const { user } = get();
                 return user?.role === 'ROLE_USER' || user?.role === 'ROLE_ADMIN';
             },
+
             canManageParticipants: () => {
                 const { user } = get();
                 return user?.role === 'ROLE_USER' || user?.role === 'ROLE_ADMIN';
             },
+
             canManageFormateurs: () => {
                 const { user } = get();
                 return user?.role === 'ROLE_USER' || user?.role === 'ROLE_ADMIN';
             },
+
             canViewStats: () => {
                 const { user } = get();
                 return user?.role === 'ROLE_RESPONSABLE' || user?.role === 'ROLE_ADMIN';
             },
+
             isAdmin: () => get().user?.role === 'ROLE_ADMIN',
             isResponsable: () => get().user?.role === 'ROLE_RESPONSABLE',
             isSimpleUser: () => get().user?.role === 'ROLE_USER',
@@ -158,18 +188,27 @@ export const useAuthStore = create(
         }),
         {
             name: 'auth-storage',
+            // CORRECTION CRITIQUE : Ne PAS persister isAuthenticated
+            // Il doit être recalculé dynamiquement depuis le token au démarrage
             partialize: (state) => ({
-                user: state.user ? {
-                    id: state.user.id,
-                    login: state.user.login,
-                    email: state.user.email,
-                    role: state.user.role,
-                    firstLogin: state.user.firstLogin,
-                } : null,
-                isAuthenticated: false,
+                user: state.user
+                    ? {
+                        id: state.user.id,
+                        login: state.user.login,
+                        email: state.user.email,
+                        role: state.user.role,
+                        firstLogin: state.user.firstLogin,
+                    }
+                    : null,
+                // isAuthenticated est intentionnellement EXCLU de la persistance
             }),
         }
     )
 );
 
+// ── Initialisation immédiate au chargement du module ───────────────────────
+// Cela garantit que le token est vérifié avant le premier rendu React
+useAuthStore.getState().initializeAuth();
+
+// ── Câbler le callback de logout dans le service API ───────────────────────
 setLogoutCallback(() => useAuthStore.getState().logout());
