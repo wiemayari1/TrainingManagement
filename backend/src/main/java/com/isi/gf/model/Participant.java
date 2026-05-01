@@ -33,7 +33,7 @@ public class Participant {
     @Column(length = 100)
     private String email;
 
-    @Pattern(regexp = "^[0-9]{8,20}$", message = "Téléphone invalide")
+    @Pattern(regexp = "^$|^[0-9]{8,20}$", message = "Téléphone invalide")
     @Column(length = 20)
     private String tel;
 
