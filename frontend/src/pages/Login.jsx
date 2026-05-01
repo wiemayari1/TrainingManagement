@@ -29,65 +29,16 @@ const Background = () => (
         zIndex: 0,
         background: 'linear-gradient(160deg, #0f0c29 0%, #1a103c 40%, #0f172a 70%, #1e1b4b 100%)',
     }}>
-        <svg style={{ position: 'absolute', top: 0, left: 0, width: '60%', height: '50%', opacity: 0.25 }}>
-            <defs>
-                <linearGradient id="w1" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#6366F1" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="#A855F7" stopOpacity="0" />
-                </linearGradient>
-            </defs>
-            <motion.path
-                d="M-50,150 C100,80 250,180 400,120 C550,60 700,160 850,100"
-                fill="none"
-                stroke="url(#w1)"
-                strokeWidth="1.2"
-                animate={{ d: [
-                        "M-50,150 C100,80 250,180 400,120 C550,60 700,160 850,100",
-                        "M-50,130 C100,100 250,160 400,140 C550,80 700,140 850,120",
-                        "M-50,150 C100,80 250,180 400,120 C550,60 700,160 850,100"
-                    ]}}
-                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            />
-            <motion.path
-                d="M-30,200 C150,130 300,230 450,170 C600,110 750,210 900,150"
-                fill="none"
-                stroke="url(#w1)"
-                strokeWidth="0.8"
-                animate={{ d: [
-                        "M-30,200 C150,130 300,230 450,170 C600,110 750,210 900,150",
-                        "M-30,180 C150,160 300,210 450,190 C600,130 750,190 900,170",
-                        "M-30,200 C150,130 300,230 450,170 C600,110 750,210 900,150"
-                    ]}}
-                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            />
-        </svg>
-
-        <svg style={{ position: 'absolute', bottom: 0, right: 0, width: '60%', height: '50%', opacity: 0.2 }}>
-            <defs>
-                <linearGradient id="w2" x1="100%" y1="100%" x2="0%" y2="0%">
-                    <stop offset="0%" stopColor="#A855F7" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#6366F1" stopOpacity="0" />
-                </linearGradient>
-            </defs>
-            <motion.path
-                d="M300,350 C450,280 600,380 750,320 C900,260 1050,360 1200,300"
-                fill="none"
-                stroke="url(#w2)"
-                strokeWidth="1.2"
-                animate={{ d: [
-                        "M300,350 C450,280 600,380 750,320 C900,260 1050,360 1200,300",
-                        "M300,330 C450,310 600,360 750,340 C900,280 1050,340 1200,320",
-                        "M300,350 C450,280 600,380 750,320 C900,260 1050,360 1200,300"
-                    ]}}
-                transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-            />
-        </svg>
-
         {[...Array(25)].map((_, i) => (
             <motion.div
                 key={i}
                 animate={{ opacity: [0, 0.8, 0], scale: [0, 1, 0] }}
-                transition={{ duration: 2 + Math.random() * 3, repeat: Infinity, delay: Math.random() * 5, ease: "easeInOut" }}
+                transition={{
+                    duration: 2 + Math.random() * 3,
+                    repeat: Infinity,
+                    delay: Math.random() * 5,
+                    ease: "easeInOut",
+                }}
                 style={{
                     position: 'absolute',
                     left: `${Math.random() * 100}%`,
@@ -95,14 +46,22 @@ const Background = () => (
                     width: Math.random() * 3 + 2,
                     height: Math.random() * 3 + 2,
                     borderRadius: '50%',
-                    background: i % 2 === 0 ? 'rgba(168, 85, 247, 0.7)' : 'rgba(99, 102, 241, 0.6)',
-                    boxShadow: i % 2 === 0 ? '0 0 8px rgba(168, 85, 247, 0.8)' : '0 0 8px rgba(99, 102, 241, 0.8)',
+                    background: i % 2 === 0
+                        ? 'rgba(168, 85, 247, 0.7)'
+                        : 'rgba(99, 102, 241, 0.6)',
                 }}
             />
         ))}
-
-        <Box sx={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)', top: '5%', left: '-5%', filter: 'blur(80px)' }} />
-        <Box sx={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%)', bottom: '5%', right: '-5%', filter: 'blur(80px)' }} />
+        <Box sx={{
+            position: 'absolute', width: 500, height: 500, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)',
+            top: '5%', left: '-5%', filter: 'blur(80px)',
+        }} />
+        <Box sx={{
+            position: 'absolute', width: 400, height: 400, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%)',
+            bottom: '5%', right: '-5%', filter: 'blur(80px)',
+        }} />
     </Box>
 );
 
@@ -140,9 +99,13 @@ export default function Login() {
         try {
             const result = await login(form.login, form.password);
             if (result.success) {
-                if (result.user?.firstLogin) navigate('/first-login');
-                else if (result.user?.role === 'ROLE_RESPONSABLE') navigate('/stats');
-                else navigate('/dashboard');
+                if (result.user?.firstLogin) {
+                    navigate('/first-login');
+                } else {
+                    // Tous les rôles vont vers /dashboard
+                    // Le Dashboard affiche le bon contenu selon le rôle
+                    navigate('/dashboard');
+                }
             } else {
                 setError(result.error || 'Identifiants incorrects.');
             }
@@ -181,6 +144,7 @@ export default function Login() {
                     flexDirection: { xs: 'column', md: 'row' },
                     minHeight: 520,
                 }}>
+                    {/* Barre de couleur en haut */}
                     <Box sx={{
                         position: 'absolute',
                         top: 0, left: 0, right: 0,
@@ -189,6 +153,7 @@ export default function Login() {
                         zIndex: 2,
                     }} />
 
+                    {/* Panneau gauche — Logo */}
                     <Box sx={{
                         width: { xs: '100%', md: '46%' },
                         bgcolor: '#F5F3FF',
@@ -201,16 +166,12 @@ export default function Login() {
                         overflow: 'hidden',
                     }}>
                         <Box sx={{
-                            position: 'absolute',
-                            width: 300, height: 300,
-                            borderRadius: '50%',
+                            position: 'absolute', width: 300, height: 300, borderRadius: '50%',
                             background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)',
                             top: '-8%', left: '-30%',
                         }} />
                         <Box sx={{
-                            position: 'absolute',
-                            width: 260, height: 260,
-                            borderRadius: '50%',
+                            position: 'absolute', width: 260, height: 260, borderRadius: '50%',
                             background: 'radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%)',
                             bottom: '-8%', right: '-25%',
                         }} />
@@ -222,11 +183,7 @@ export default function Login() {
                             style={{ width: '100%', textAlign: 'center', position: 'relative', zIndex: 1 }}
                         >
                             <motion.div variants={itemVariants}>
-                                <Box sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                     <img
                                         src="/assets/logo.png"
                                         alt="Logo Excellent Training"
@@ -244,6 +201,7 @@ export default function Login() {
                         </motion.div>
                     </Box>
 
+                    {/* Panneau droit — Formulaire */}
                     <Box sx={{
                         width: { xs: '100%', md: '54%' },
                         display: 'flex',
@@ -251,18 +209,10 @@ export default function Login() {
                         justifyContent: 'center',
                         p: { xs: 3, md: 5 },
                     }}>
-                        <motion.div
-                            variants={containerVariants}
-                            initial="hidden"
-                            animate="visible"
-                        >
+                        <motion.div variants={containerVariants} initial="hidden" animate="visible">
+
                             <motion.div variants={itemVariants} style={{ textAlign: 'center', marginBottom: 28 }}>
-                                <Typography sx={{
-                                    fontWeight: 700,
-                                    color: '#0F172A',
-                                    fontSize: '1.7rem',
-                                    mb: 0.5,
-                                }}>
+                                <Typography sx={{ fontWeight: 700, color: '#0F172A', fontSize: '1.7rem', mb: 0.5 }}>
                                     Bienvenue !
                                 </Typography>
                                 <Typography sx={{ color: '#64748B', fontSize: '0.9rem' }}>
@@ -273,13 +223,9 @@ export default function Login() {
                             {error && (
                                 <motion.div variants={itemVariants}>
                                     <Alert severity="error" sx={{
-                                        mb: 2.5,
-                                        borderRadius: 2,
-                                        bgcolor: '#FEF2F2',
-                                        color: '#991B1B',
-                                        border: '1px solid #FECACA',
-                                        fontSize: '0.875rem',
-                                        py: 0.5,
+                                        mb: 2.5, borderRadius: 2,
+                                        bgcolor: '#FEF2F2', color: '#991B1B',
+                                        border: '1px solid #FECACA', fontSize: '0.875rem', py: 0.5,
                                     }}>
                                         {error}
                                     </Alert>
@@ -303,17 +249,10 @@ export default function Login() {
                                                 </InputAdornment>
                                             ),
                                             sx: {
-                                                borderRadius: '12px',
-                                                bgcolor: '#F9FAFB',
-                                                fontSize: '0.95rem',
-                                                py: 0.1,
+                                                borderRadius: '12px', bgcolor: '#F9FAFB', fontSize: '0.95rem', py: 0.1,
                                                 '& fieldset': { borderColor: '#E5E7EB', borderWidth: '1.5px' },
                                                 '&:hover fieldset': { borderColor: '#C4B5FD' },
-                                                '&.Mui-focused fieldset': {
-                                                    borderColor: '#6366F1',
-                                                    borderWidth: '1.5px',
-                                                    boxShadow: '0 0 0 3px rgba(99,102,241,0.1)',
-                                                },
+                                                '&.Mui-focused fieldset': { borderColor: '#6366F1', borderWidth: '1.5px', boxShadow: '0 0 0 3px rgba(99,102,241,0.1)' },
                                             },
                                         }}
                                     />
@@ -342,22 +281,17 @@ export default function Login() {
                                                         size="small"
                                                         sx={{ color: '#9CA3AF', '&:hover': { color: '#6366F1' } }}
                                                     >
-                                                        {showPwd ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                                        {showPwd
+                                                            ? <VisibilityOff fontSize="small" />
+                                                            : <Visibility fontSize="small" />}
                                                     </IconButton>
                                                 </InputAdornment>
                                             ),
                                             sx: {
-                                                borderRadius: '12px',
-                                                bgcolor: '#F9FAFB',
-                                                fontSize: '0.95rem',
-                                                py: 0.1,
+                                                borderRadius: '12px', bgcolor: '#F9FAFB', fontSize: '0.95rem', py: 0.1,
                                                 '& fieldset': { borderColor: '#E5E7EB', borderWidth: '1.5px' },
                                                 '&:hover fieldset': { borderColor: '#C4B5FD' },
-                                                '&.Mui-focused fieldset': {
-                                                    borderColor: '#6366F1',
-                                                    borderWidth: '1.5px',
-                                                    boxShadow: '0 0 0 3px rgba(99,102,241,0.1)',
-                                                },
+                                                '&.Mui-focused fieldset': { borderColor: '#6366F1', borderWidth: '1.5px', boxShadow: '0 0 0 3px rgba(99,102,241,0.1)' },
                                             },
                                         }}
                                     />
@@ -366,9 +300,7 @@ export default function Login() {
                                 <motion.div variants={itemVariants} style={{ textAlign: 'right', marginBottom: 24 }}>
                                     <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
                                         <Typography sx={{
-                                            color: '#6366F1',
-                                            fontWeight: 600,
-                                            fontSize: '0.85rem',
+                                            color: '#6366F1', fontWeight: 600, fontSize: '0.85rem',
                                             '&:hover': { color: '#4F46E5' },
                                         }}>
                                             Mot de passe oublié ?
@@ -383,11 +315,8 @@ export default function Login() {
                                         variant="contained"
                                         disabled={loading}
                                         sx={{
-                                            py: 1.4,
-                                            borderRadius: '12px',
-                                            textTransform: 'none',
-                                            fontWeight: 700,
-                                            fontSize: '1rem',
+                                            py: 1.4, borderRadius: '12px',
+                                            textTransform: 'none', fontWeight: 700, fontSize: '1rem',
                                             background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A855F7 100%)',
                                             '&:hover': {
                                                 background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #9333EA 100%)',
@@ -404,15 +333,13 @@ export default function Login() {
 
                             <motion.div variants={itemVariants}>
                                 <Typography sx={{
-                                    display: 'block',
-                                    textAlign: 'center',
-                                    mt: 4,
-                                    color: '#94A3B8',
-                                    fontSize: '0.75rem',
+                                    display: 'block', textAlign: 'center', mt: 4,
+                                    color: '#94A3B8', fontSize: '0.75rem',
                                 }}>
                                     © 2026 Excellent Training — Green Building
                                 </Typography>
                             </motion.div>
+
                         </motion.div>
                     </Box>
                 </Paper>

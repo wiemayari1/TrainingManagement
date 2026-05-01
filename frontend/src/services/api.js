@@ -1,14 +1,10 @@
 import axios from 'axios';
 
-// ✅ FIX — Utiliser process.env (Create React App) pas import.meta.env (Vite)
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8081/api';
 
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  // ✅ FIX — withCredentials: true cause des problèmes CORS en HTTPS quand
-  // le frontend et le backend sont sur des sous-domaines différents.
-  // On utilise le token JWT dans le header Authorization à la place (plus sûr).
   withCredentials: false,
   timeout: 30000,
 });
@@ -16,29 +12,26 @@ const api = axios.create({
 let logoutCallback = null;
 export const setLogoutCallback = (cb) => { logoutCallback = cb; };
 
-// ── Token en mémoire ────────────────────────────────────────────────────────
-let inMemoryToken = null;
+// ── Token stocké en localStorage pour survivre aux rechargements de page ──────
+// sessionStorage se vide à chaque rechargement ce qui causait les 401
+const TOKEN_KEY = '_auth_token';
 
 export const setToken = (token) => {
-  inMemoryToken = token;
   if (token) {
-    sessionStorage.setItem('_t', token);
+    localStorage.setItem(TOKEN_KEY, token);
   } else {
-    sessionStorage.removeItem('_t');
+    localStorage.removeItem(TOKEN_KEY);
   }
 };
 
 export const getToken = () => {
-  if (!inMemoryToken) {
-    inMemoryToken = sessionStorage.getItem('_t') || null;
-  }
-  return inMemoryToken;
+  return localStorage.getItem(TOKEN_KEY) || null;
 };
 
 export const clearToken = () => {
-  inMemoryToken = null;
+  localStorage.removeItem(TOKEN_KEY);
+  // Nettoyer aussi l'ancienne clé sessionStorage si elle existe
   sessionStorage.removeItem('_t');
-  localStorage.removeItem('token');
 };
 
 // ── Intercepteur requête ─────────────────────────────────────────────────────
@@ -47,7 +40,6 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  delete config.headers['X-Forwarded-For'];
   return config;
 });
 
@@ -56,12 +48,22 @@ api.interceptors.response.use(
     (res) => res,
     (err) => {
       if (err.response?.status === 401) {
-        clearToken();
-        if (logoutCallback) logoutCallback();
-        else window.location.href = '/login';
+        // Vérifier que c'est bien un problème de token et pas autre chose
+        const token = getToken();
+        if (!token) {
+          // Pas de token → rediriger vers login
+          clearToken();
+          if (logoutCallback) logoutCallback();
+          else window.location.href = '/login';
+        } else {
+          // Token présent mais rejeté → token expiré ou invalide
+          clearToken();
+          if (logoutCallback) logoutCallback();
+          else window.location.href = '/login';
+        }
       }
       if (err.response?.status >= 500) {
-        console.error('Erreur serveur:', err.response?.status);
+        console.error('Erreur serveur:', err.response?.status, err.response?.data);
       }
       return Promise.reject(err);
     }

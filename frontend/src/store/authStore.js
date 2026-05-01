@@ -2,12 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { setToken, clearToken, getToken, setLogoutCallback } from '../services/api';
 
-// ─── SÉCURITÉ : le token JWT ne doit JAMAIS aller dans localStorage ──────────
-// localStorage est accessible par tout JS de la page (XSS).
-// On stocke uniquement les métadonnées non-sensibles en persistence.
-// Le token vit en sessionStorage (onglet uniquement) + mémoire (api.js).
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -37,7 +31,7 @@ export const useAuthStore = create(
                         throw new Error('Token manquant dans la réponse serveur');
                     }
 
-                    // Token en sessionStorage seulement (disparaît à la fermeture de l'onglet)
+                    // Stocker le token
                     setToken(data.token);
 
                     const user = {
@@ -46,14 +40,12 @@ export const useAuthStore = create(
                         email: data.email,
                         role: data.role || 'ROLE_USER',
                         firstLogin: data.firstLogin === true || data.firstLogin === 'true',
-                        // JAMAIS le token dans user (objet persisté)
                     };
 
                     set({ user, isAuthenticated: true, isLoading: false, error: null });
                     return { success: true, user };
                 } catch (error) {
                     set({ isLoading: false, error: error.message });
-                    // Message générique côté client — ne pas exposer les détails
                     return { success: false, error: 'Identifiants incorrects ou erreur serveur.' };
                 }
             },
@@ -86,25 +78,21 @@ export const useAuthStore = create(
                 }));
             },
 
+            // Vérifie si le token est encore valide sans modifier l'état
             checkAuth: () => {
                 const token = getToken();
-                if (!token) {
-                    set({ user: null, isAuthenticated: false });
-                    return false;
-                }
+                if (!token) return false;
                 try {
                     const payload = JSON.parse(atob(token.split('.')[1]));
                     if (payload.exp * 1000 < Date.now()) {
                         clearToken();
-                        set({ user: null, isAuthenticated: false });
                         return false;
                     }
+                    return true;
                 } catch {
                     clearToken();
-                    set({ user: null, isAuthenticated: false });
                     return false;
                 }
-                return true;
             },
 
             hasRole: (role) => {
@@ -148,7 +136,6 @@ export const useAuthStore = create(
         }),
         {
             name: 'auth-storage',
-            // Persister UNIQUEMENT les métadonnées non-sensibles — JAMAIS le token
             partialize: (state) => ({
                 user: state.user ? {
                     id: state.user.id,
@@ -156,7 +143,6 @@ export const useAuthStore = create(
                     email: state.user.email,
                     role: state.user.role,
                     firstLogin: state.user.firstLogin,
-                    // token intentionnellement exclu
                 } : null,
                 isAuthenticated: state.isAuthenticated,
             }),
