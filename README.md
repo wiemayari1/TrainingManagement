@@ -127,11 +127,16 @@ Vous pouvez utiliser des générateurs en ligne (comme un générateur SHA-256),
 
 ---
 
-## Architecture de Sécurité et Validations
+## Architecture de Sécurité Avancée et Validations
 
-La sécurité a été conçue pour répondre aux plus hauts standards académiques et industriels :
-- **Validations strictes (@Valid)** : Toutes les données entrantes (ex: création d'un utilisateur ou d'une formation) sont scrupuleusement vérifiées côté backend avant l'insertion en base, garantissant ainsi une parfaite fiabilité des données (conformément au cahier des charges).
-- **Protection des accès** : Chaque action de l'API est filtrée (@PreAuthorize). L'Administrateur a les pleins pouvoirs, le Responsable gère l'analytique et l'évaluation, et le simple Utilisateur gère le fonctionnel opérationnel (Formations, Participants).
+La sécurité est une composante majeure de l'application, conçue pour protéger les données sensibles et répondre aux normes industrielles :
+- **Authentification sans état (JWT)** : L'application utilise les JSON Web Tokens (JWT) pour une sécurisation optimale des échanges entre le frontend React et l'API Spring Boot.
+- **Hachage cryptographique (BCrypt)** : Tous les mots de passe sont hachés de manière irréversible avec l'algorithme BCrypt avant leur stockage en base de données.
+- **Contrôle d'Accès Basé sur les Rôles (RBAC)** : Les routes et méthodes de l'API sont strictement verrouillées (via `@PreAuthorize`) selon trois niveaux de privilèges :
+  - **Administrateur** : Accès total au système et gestion des comptes utilisateurs.
+  - **Responsable** : Accès aux statistiques et au tableau de bord analytique.
+  - **Utilisateur** : Accès au suivi fonctionnel (Formations, Participants, Formateurs).
+- **Validations strictes (@Valid)** : Toutes les données saisies par les utilisateurs sont systématiquement validées par le backend (Jakarta Validation) pour garantir l'intégrité et la fiabilité des informations en base, conformément aux exigences du cahier des charges.
 
 ---
 
@@ -140,3 +145,12 @@ La sécurité a été conçue pour répondre aux plus hauts standards académiqu
 1. **Intégration du système d'E-mailing complet** : Développer un mécanisme robuste pour notifier les acteurs de manière proactive avec des modèles de courriels professionnels intégrant des images incrustées.
 2. **Analytique en Temps Réel** : Remplacer l'ancien système manuel (Excel) par des graphiques interactifs qui lisent dynamiquement les données relationnelles complexes de la base.
 3. **Sécurité et CORS** : Gestion approfondie des filtres JWT pour bloquer correctement les accès non autorisés (401/403) sans rompre la communication entre le front-end React et l'API Spring Boot.
+
+---
+
+## Perspectives d'Évolution
+
+Afin d'améliorer encore l'application dans le futur, voici quelques perspectives d'évolution envisageables :
+- **Génération d'Attestations** : Création automatique d'attestations de présence et de réussite au format PDF pour les participants à la fin d'une formation.
+- **Déploiement Cloud / Docker** : Conteneuriser l'application avec Docker pour simplifier et automatiser son déploiement sur des serveurs cloud.
+- **Intégration d'un Calendrier Interactif** : Ajouter une vue calendrier (type FullCalendar) pour offrir une visualisation temporelle globale de toutes les sessions de formation planifiées.
