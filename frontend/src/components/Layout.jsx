@@ -11,40 +11,27 @@ import {
     Assessment, AdminPanelSettings, Business, Category, Work,
     Logout, Storefront,
     Menu as MenuIcon,
+    ChevronRight,
 } from '@mui/icons-material';
 
-const DRAWER_FULL = 260;
+const DRAWER_FULL = 280;
 const DRAWER_MINI = 72;
 
-// ═══════════════════════════════════════════════════════════════
-// PALETTE EXACTE — Sidebar violet foncé comme screenshot
-// ═══════════════════════════════════════════════════════════════
 const COLORS = {
-    // Sidebar fond
-    sidebarBg: '#1E1B4B',            // Violet très foncé (presque bleu nuit)
+    sidebarBg: '#0F0E2E',
     sidebarBgHover: 'rgba(255,255,255,0.06)',
-    sidebarActiveBg: '#312E81',      // Violet plus clair pour item actif
-
-    // Accents
-    primary: '#6366F1',              // Indigo/violet vif
+    sidebarActiveBg: 'linear-gradient(90deg, #4C1D95 0%, #7C3AED 100%)',
+    sidebarActiveBgSolid: '#4C1D95',
+    primary: '#6366F1',
     primaryLight: '#818CF8',
-
-    // Texte sidebar
-    text: '#A5B4FC',                 // Lilas clair (items inactifs)
-    textActive: '#FFFFFF',           // Blanc (item actif)
+    text: '#A5B4FC',
+    textActive: '#FFFFFF',
     textHover: '#FFFFFF',
-
-    // Header "Administration"
-    headerText: '#818CF8',           // Indigo clair
-
-    // Page principale
-    pageBg: '#F1F5F9',               // Gris très clair (pas blanc)
-
-    // AppBar
+    textMuted: 'rgba(255,255,255,0.5)',
+    headerText: '#818CF8',
+    pageBg: '#F1F5F9',
     headerBg: '#FFFFFF',
     headerBorder: '#E2E8F0',
-
-    // Bordures
     border: 'rgba(255,255,255,0.08)',
 };
 
@@ -125,66 +112,81 @@ export default function Layout() {
             flexDirection: 'column',
             bgcolor: COLORS.sidebarBg,
         }}>
-            {/* ═════════════════ HEADER — Logo AGRANDI ═════════════════ */}
+            {/* ═════════════════ HEADER — TOUJOURS VISIBLE ═════════════════ */}
             <Box sx={{
-                p: 2.5,
+                p: collapsed ? 1.5 : 2,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: collapsed ? 0 : 1.5,
                 position: 'relative',
-                minHeight: 100,              // PLUS HAUT pour logo plus grand
+                minHeight: collapsed ? 60 : 70,
             }}>
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                }}>
-                    <Box
-                        component="img"
-                        src="/assets/logo.png"
-                        alt="Excellent Training"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                        }}
-                        sx={{
-                            height: collapsed ? 50 : 75,        // AGRANDI : 75px
-                            width: 'auto',
-                            maxWidth: collapsed ? 55 : 200,
-                            objectFit: 'contain',
-                            transition: 'all 0.2s',
-                            // Légère lueur blanche pour ressortir sur fond foncé
-                            filter: 'drop-shadow(0 0 12px rgba(255,255,255,0.15))',
-                        }}
-                    />
-                    {/* Fallback */}
-                    <Box
-                        sx={{
-                            display: 'none',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: collapsed ? 50 : 75,
-                            height: collapsed ? 50 : 75,
-                            borderRadius: 2,
-                            bgcolor: 'rgba(99,102,241,0.2)',
-                            color: '#A5B4FC',
-                            fontWeight: 800,
-                            fontSize: collapsed ? '1.1rem' : '1.6rem',
-                            letterSpacing: '0.05em',
-                        }}
-                    >
-                        ET
-                    </Box>
+                {/* Logo */}
+                <Box
+                    component="img"
+                    src="/assets/logo_2.png"
+                    alt="Excellent Training"
+                    onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                    }}
+                    sx={{
+                        width: collapsed ? 36 : 42,
+                        height: collapsed ? 36 : 42,
+                        objectFit: 'contain',
+                        flexShrink: 0,
+                    }}
+                />
+                {/* Fallback */}
+                <Box
+                    sx={{
+                        display: 'none',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: collapsed ? 36 : 42,
+                        height: collapsed ? 36 : 42,
+                        borderRadius: 2,
+                        bgcolor: 'rgba(99,102,241,0.2)',
+                        color: '#A5B4FC',
+                        fontWeight: 800,
+                        fontSize: collapsed ? '0.9rem' : '1.1rem',
+                        flexShrink: 0,
+                    }}
+                >
+                    ET
                 </Box>
 
-                {/* Bouton toggle */}
+                {/* Texte (visible seulement quand pas collapsed) */}
+                {!collapsed && (
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography sx={{
+                            color: '#FFFFFF',
+                            fontWeight: 700,
+                            fontSize: '1.05rem',
+                            lineHeight: 1.3,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}>
+                            Excellent Training
+                        </Typography>
+                        <Typography sx={{
+                            color: COLORS.textMuted,
+                            fontSize: '0.75rem',
+                            lineHeight: 1.4,
+                            whiteSpace: 'nowrap',
+                            mt: 0.2,
+                        }}>
+                            Centre de formation
+                        </Typography>
+                    </Box>
+                )}
+
+                {/* BOUTON TOGGLE — TOUJOURS VISIBLE ET BIEN PLACÉ */}
                 <IconButton
                     onClick={() => setCollapsed(!collapsed)}
                     sx={{
-                        position: 'absolute',
-                        right: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
                         color: 'rgba(255,255,255,0.4)',
                         '&:hover': {
                             color: '#fff',
@@ -192,21 +194,31 @@ export default function Layout() {
                         },
                         borderRadius: 1.5,
                         p: 0.8,
+                        flexShrink: 0,
+                        // Quand collapsed, on le met en haut à droite absolu
+                        ...(collapsed && {
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                        }),
                     }}
                 >
                     <SidebarToggleIcon collapsed={collapsed} />
                 </IconButton>
             </Box>
 
+            {/* ═════════════════ ESPACE ENTRE LOGO ET MENU ═════════════════ */}
+            <Box sx={{ height: collapsed ? 8 : 12 }} />
+
             {/* ═════════════════ MENU ═════════════════ */}
-            <List sx={{ flex: 1, py: 1, px: 1.5 }}>
+            <List sx={{ flex: 1, py: 0.5, px: collapsed ? 1 : 1.5 }}>
                 {menuItems.map((item, i) => {
                     if (item.type === 'divider') return (
-                        <Divider key={i} sx={{ my: 2, borderColor: COLORS.border, mx: 1 }} />
+                        <Divider key={i} sx={{ my: collapsed ? 1 : 1.5, borderColor: COLORS.border, mx: collapsed ? 0.5 : 1 }} />
                     );
                     if (item.type === 'header') return !collapsed ? (
                         <Typography key={i} variant="caption" sx={{
-                            px: 2, py: 1.5, display: 'block',
+                            px: 2, py: 1, display: 'block',
                             color: COLORS.headerText,
                             fontWeight: 600,
                             fontSize: '0.7rem',
@@ -221,43 +233,65 @@ export default function Layout() {
                     const Icon = item.icon;
 
                     return (
-                        <ListItem key={i} disablePadding sx={{ mb: 0.5 }}>
+                        <ListItem key={i} disablePadding sx={{ mb: 0.3 }}>
                             <ListItemButton
                                 onClick={() => navigate(item.path)}
                                 sx={{
                                     borderRadius: 2,
-                                    py: 1,
-                                    px: collapsed ? 1.2 : 2,
+                                    py: collapsed ? 0.7 : 0.8,
+                                    px: collapsed ? 1 : 2,
                                     justifyContent: collapsed ? 'center' : 'flex-start',
-                                    bgcolor: active ? COLORS.sidebarActiveBg : 'transparent',
+                                    bgcolor: active ? COLORS.sidebarActiveBgSolid : 'transparent',
+                                    background: active ? COLORS.sidebarActiveBg : 'transparent',
                                     color: active ? COLORS.textActive : COLORS.text,
                                     '&:hover': {
-                                        bgcolor: active ? '#3730A3' : COLORS.sidebarBgHover,
+                                        bgcolor: active ? undefined : COLORS.sidebarBgHover,
                                         color: COLORS.textHover,
                                     },
                                     transition: 'all 0.15s',
+                                    position: 'relative',
                                 }}
                             >
+                                {active && (
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        width: 3,
+                                        height: 18,
+                                        bgcolor: '#A855F7',
+                                        borderRadius: '0 4px 4px 0',
+                                    }} />
+                                )}
+
                                 <ListItemIcon sx={{
-                                    minWidth: collapsed ? 0 : 32,
+                                    minWidth: 0,
                                     color: active ? '#fff' : 'inherit',
-                                    mr: collapsed ? 0 : 1.5,
+                                    mr: collapsed ? 0 : 1.2,
                                     justifyContent: 'center',
                                 }}>
                                     <Icon fontSize="small" />
                                 </ListItemIcon>
 
                                 {!collapsed && (
-                                    <ListItemText
-                                        primary={item.label}
-                                        primaryTypographyProps={{
-                                            fontSize: '0.85rem',
-                                            fontWeight: active ? 500 : 400,
-                                        }}
-                                    />
+                                    <>
+                                        <ListItemText
+                                            primary={item.label}
+                                            primaryTypographyProps={{
+                                                fontSize: '0.85rem',
+                                                fontWeight: active ? 600 : 400,
+                                            }}
+                                        />
+                                        {isAdmin() && item.path?.startsWith('/admin') && (
+                                            <ChevronRight sx={{
+                                                color: active ? '#fff' : 'rgba(255,255,255,0.3)',
+                                                fontSize: 16,
+                                            }} />
+                                        )}
+                                    </>
                                 )}
 
-                                {/* Point indicateur actif */}
                                 {active && collapsed && (
                                     <Box sx={{
                                         position: 'absolute',
@@ -275,15 +309,32 @@ export default function Layout() {
             </List>
 
             {/* ═════════════════ FOOTER ═════════════════ */}
-            <Box sx={{ p: 2.5 }}>
-                {!collapsed && (
-                    <Typography variant="caption" sx={{
+            <Box sx={{ p: collapsed ? 1 : 1.5, borderTop: `1px solid ${COLORS.border}` }}>
+                {!collapsed ? (
+                    <Box>
+                        <Typography sx={{
+                            color: COLORS.textMuted,
+                            fontSize: '0.75rem',
+                            textAlign: 'center',
+                        }}>
+                            © 2026 Excellent Training
+                        </Typography>
+                        <Typography sx={{
+                            color: 'rgba(255,255,255,0.3)',
+                            fontSize: '0.7rem',
+                            textAlign: 'center',
+                        }}>
+                            Tous droits réservés
+                        </Typography>
+                    </Box>
+                ) : (
+                    <Typography sx={{
                         color: 'rgba(255,255,255,0.3)',
-                        display: 'block',
+                        fontSize: '0.6rem',
                         textAlign: 'center',
-                        fontSize: '0.7rem',
+                        display: 'block',
                     }}>
-                        © 2026 Excellent Training
+                        © 2026
                     </Typography>
                 )}
             </Box>
@@ -292,7 +343,6 @@ export default function Layout() {
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: COLORS.pageBg }}>
-            {/* ═════════════════ APPBAR ═════════════════ */}
             <AppBar position="fixed" sx={{
                 width: { sm: `calc(100% - ${drawerWidth}px)` },
                 ml: { sm: `${drawerWidth}px` },
@@ -436,7 +486,6 @@ export default function Layout() {
                 </Toolbar>
             </AppBar>
 
-            {/* ═════════════════ DRAWERS ═════════════════ */}
             <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
                 <Drawer
                     variant="temporary"

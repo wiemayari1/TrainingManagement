@@ -3,11 +3,13 @@ package com.isi.gf.controller;
 import com.isi.gf.dto.MessageResponse;
 import com.isi.gf.model.Inscription;
 import com.isi.gf.repo.InscriptionRepo;
+import com.isi.gf.service.FormationNotificationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -16,6 +18,9 @@ public class InscriptionController {
 
     @Autowired
     private InscriptionRepo repo;
+
+    @Autowired
+    private FormationNotificationService notificationService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('USER', 'RESPONSABLE', 'ADMIN')")
@@ -33,14 +38,21 @@ public class InscriptionController {
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> create(@Valid @RequestBody Inscription inscription) {
         boolean exists = repo.existsByFormationIdAndParticipantId(
-            inscription.getFormation().getId(),
-            inscription.getParticipant().getId()
+                inscription.getFormation().getId(),
+                inscription.getParticipant().getId()
         );
         if (exists) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Ce participant est déjà inscrit à cette formation", false));
+                    .body(new MessageResponse("Ce participant est déjà inscrit à cette formation", false));
         }
-        repo.save(inscription);
+
+        Inscription saved = repo.save(inscription);
+
+        // Recharger l'inscription avec les relations complètes (participant + formation)
+        repo.findById(saved.getId()).ifPresent(full -> {
+            notificationService.notifyParticipantAssigned(full);
+        });
+
         return ResponseEntity.ok(new MessageResponse("Inscription créée avec succès", true));
     }
 
@@ -53,10 +65,11 @@ public class InscriptionController {
         Long newFormId = inscription.getFormation().getId();
         Long newPartId = inscription.getParticipant().getId();
 
-        if ((!existing.getFormation().getId().equals(newFormId) || !existing.getParticipant().getId().equals(newPartId))
-            && repo.existsByFormationIdAndParticipantId(newFormId, newPartId)) {
+        if ((!existing.getFormation().getId().equals(newFormId)
+                || !existing.getParticipant().getId().equals(newPartId))
+                && repo.existsByFormationIdAndParticipantId(newFormId, newPartId)) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Ce participant est déjà inscrit à cette formation", false));
+                    .body(new MessageResponse("Ce participant est déjà inscrit à cette formation", false));
         }
 
         inscription.setId(id);

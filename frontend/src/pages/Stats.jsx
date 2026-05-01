@@ -112,7 +112,7 @@ const RadarTooltip = ({ active, payload }) => {
     );
 };
 
-// ── Graphique Barres + Ligne alignés via BarChart (stable) ───────────────────
+// ── Graphique Barres + Ligne alignés ─────────────────────────────────────────
 const CustomBarLineChart = ({
                                 chartId,
                                 data,
@@ -144,19 +144,15 @@ const CustomBarLineChart = ({
     return (
         <Box sx={{ width: '100%', height }}>
             <ResponsiveContainer width="100%" height={height}>
-                {/* BarChart accepte Bar + Line et gère mieux l'alignement que ComposedChart */}
                 <BarChart
                     key={chartId}
                     data={data}
-                    barCategoryGap="20%"
+                    barCategoryGap="30%"
                     margin={{ top: 20, right: 50, left: 10, bottom: xHeight }}
                 >
                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                     <XAxis
                         dataKey={nameKey}
-                        type="category"
-                        scale="point"                       // ← garantit que ticks = centre des barres
-                        padding={{ left: barSize, right: barSize }} // ← symétrie parfaite
                         tick={{ fontSize: 10, fill: '#64748B' }}
                         axisLine={false}
                         tickLine={false}
@@ -186,40 +182,43 @@ const CustomBarLineChart = ({
                     <Tooltip
                         content={({ active, payload, label }) => {
                             if (!active || !payload?.length) return null;
-                            const barItem = payload.find(p => p.dataKey === barKey);
+                            const barItem  = payload.find(p => p.dataKey === barKey);
                             const lineItem = payload.find(p => p.dataKey === lineKey);
-                            const barVal = barItem?.value;
-                            const lineVal = lineItem?.value;
-                            const barFillColor = colorMap[label] || (Array.isArray(barColors) ? barColors[0] : barColors) || '#6366F1';
-
+                            const barFill  = colorMap[label]
+                                || (Array.isArray(barColors) ? barColors[0] : barColors)
+                                || '#6366F1';
                             return (
                                 <Box sx={{
-                                    bgcolor: '#0F172A', border: '1px solid rgba(255,255,255,0.08)',
+                                    bgcolor: '#0F172A',
+                                    border: '1px solid rgba(255,255,255,0.08)',
                                     borderRadius: '10px', p: '10px 14px',
                                     boxShadow: '0 20px 40px rgba(0,0,0,0.5)', minWidth: 150,
                                 }}>
-                                    <Typography sx={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, mb: 0.8, textTransform: 'uppercase' }}>
+                                    <Typography sx={{
+                                        fontSize: '0.7rem', color: '#64748B',
+                                        fontWeight: 700, mb: 0.8, textTransform: 'uppercase',
+                                    }}>
                                         {label}
                                     </Typography>
-                                    {barVal != null && (
+                                    {barItem?.value != null && (
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.4 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
-                                                <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: barFillColor }} />
+                                                <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: barFill }} />
                                                 <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>{barName}</Typography>
                                             </Box>
                                             <Typography sx={{ fontSize: '0.78rem', color: '#F1F5F9', fontWeight: 700 }}>
-                                                {tooltipFormatter ? tooltipFormatter(barVal, barKey) : barVal}
+                                                {tooltipFormatter ? tooltipFormatter(barItem.value, barKey) : barItem.value}
                                             </Typography>
                                         </Box>
                                     )}
-                                    {lineVal != null && (
+                                    {lineItem?.value != null && (
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.4 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
                                                 <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: lineColor }} />
                                                 <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>{lineName}</Typography>
                                             </Box>
                                             <Typography sx={{ fontSize: '0.78rem', color: '#F1F5F9', fontWeight: 700 }}>
-                                                {tooltipFormatter ? tooltipFormatter(lineVal, lineKey) : lineVal}
+                                                {tooltipFormatter ? tooltipFormatter(lineItem.value, lineKey) : lineItem.value}
                                             </Typography>
                                         </Box>
                                     )}
@@ -234,11 +233,16 @@ const CustomBarLineChart = ({
                         maxBarSize={barSize}
                         animationDuration={1000}
                         radius={[6, 6, 0, 0]}
+                        isAnimationActive={true}
                     >
                         {data.map((entry) => (
                             <Cell
                                 key={`cell-${entry[nameKey]}`}
-                                fill={colorMap[entry[nameKey]] || (Array.isArray(barColors) ? barColors[0] : barColors) || '#6366F1'}
+                                fill={
+                                    colorMap[entry[nameKey]]
+                                    || (Array.isArray(barColors) ? barColors[0] : barColors)
+                                    || '#6366F1'
+                                }
                             />
                         ))}
                     </Bar>
@@ -249,10 +253,11 @@ const CustomBarLineChart = ({
                         name={lineName}
                         stroke={lineColor}
                         strokeWidth={3}
-                        dot={{ r: 5, fill: lineColor, stroke: '#fff', strokeWidth: 2 }}
-                        activeDot={{ r: 7, strokeWidth: 0, fill: lineColor }}
+                        dot={{ r: 6, fill: '#fff', stroke: lineColor, strokeWidth: 2.5 }}
+                        activeDot={{ r: 8, strokeWidth: 0, fill: lineColor }}
                         animationDuration={1000}
-                        animationBegin={0}
+                        animationBegin={200}
+                        connectNulls={true}
                     />
                 </BarChart>
             </ResponsiveContainer>
@@ -460,11 +465,10 @@ export default function Stats() {
         return `${pct >= 0 ? '+' : ''}${pct}%`;
     };
 
-    // ── Données mémoïsées pour les graphes combo ──
     const domaineData = useMemo(() => stats?.formationsParDomaine || [], [stats?.formationsParDomaine]);
     const topFormateursData = useMemo(() =>
             stats?.topFormateurs?.map(f => ({
-                name: `${f.prenom} ${f.nom?.substring(0, 1) || ''}.`,
+                name: `${f.prenom || ''} ${(f.nom || '').substring(0, 1)}.`,
                 formations: f.nbFormations || 0,
                 note: f.noteMoyenne || 0,
             })) || [],
@@ -483,9 +487,9 @@ export default function Stats() {
     });
 
     const maxValues = {
-        formations: Math.max(...annualTrend.map(d => d.formations)),
-        participants: Math.max(...annualTrend.map(d => d.participants)),
-        budget: Math.max(...annualTrend.map(d => d.budget)),
+        formations: Math.max(...annualTrend.map(d => d.formations), 1),
+        participants: Math.max(...annualTrend.map(d => d.participants), 1),
+        budget: Math.max(...annualTrend.map(d => d.budget), 1),
         tauxPresence: 100,
     };
 
@@ -633,13 +637,10 @@ export default function Stats() {
                     transition={{ duration: 0.28 }}
                 >
 
-                    {/* ══════════════════════════════════════════════════════════════
-                        TAB 0 — VUE D'ENSEMBLE
-                    ══════════════════════════════════════════════════════════════ */}
+                    {/* ══ TAB 0 — VUE D'ENSEMBLE ══════════════════════════════ */}
                     {activeTab === 0 && (
                         <Grid container spacing={2.5}>
 
-                            {/* Statuts formations */}
                             <Grid item xs={12} md={5}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -649,7 +650,6 @@ export default function Stats() {
                                         <Typography sx={{ fontSize: '0.73rem', color: '#94A3B8', mb: 2.5 }}>
                                             Répartition {primaryYear}
                                         </Typography>
-
                                         {isLoadingCurrent ? (
                                             <Skeleton variant="circular" width={200} height={200} sx={{ mx: 'auto' }} />
                                         ) : (
@@ -687,7 +687,6 @@ export default function Stats() {
                                 </Card>
                             </Grid>
 
-                            {/* Participants par structure */}
                             <Grid item xs={12} md={7}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -697,7 +696,6 @@ export default function Stats() {
                                         <Typography sx={{ fontSize: '0.73rem', color: '#94A3B8', mb: 2.5 }}>
                                             Répartition des effectifs formés · {primaryYear}
                                         </Typography>
-
                                         {isLoadingCurrent ? (
                                             <Skeleton variant="rounded" width="100%" height={200} />
                                         ) : (stats?.participantsParStructure?.length > 0) ? (
@@ -728,7 +726,6 @@ export default function Stats() {
                                 </Card>
                             </Grid>
 
-                            {/* Répartition par domaine (Donut) */}
                             <Grid item xs={12} md={5}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -775,7 +772,6 @@ export default function Stats() {
                                 </Card>
                             </Grid>
 
-                            {/* Domaines — formations & budget */}
                             <Grid item xs={12} md={7}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -825,9 +821,7 @@ export default function Stats() {
                         </Grid>
                     )}
 
-                    {/* ══════════════════════════════════════════════════════════════
-                        TAB 1 — ÉVOLUTION MENSUELLE
-                    ══════════════════════════════════════════════════════════════ */}
+                    {/* ══ TAB 1 — ÉVOLUTION MENSUELLE ═════════════════════════ */}
                     {activeTab === 1 && (
                         <Grid container spacing={2.5}>
                             <Grid item xs={12}>
@@ -897,7 +891,6 @@ export default function Stats() {
                                 </Card>
                             </Grid>
 
-                            {/* Mini cartes mensuelles */}
                             {(stats?.evolutionMensuelle || []).map((m, i) => {
                                 const monthlyData = stats?.evolutionMensuelle || [];
                                 const maxMonthly = Math.max(...monthlyData.map(x => x[chartMetric] || 0), 1);
@@ -930,9 +923,7 @@ export default function Stats() {
                         </Grid>
                     )}
 
-                    {/* ══════════════════════════════════════════════════════════════
-                        TAB 2 — NOTES & RÉSULTATS
-                    ══════════════════════════════════════════════════════════════ */}
+                    {/* ══ TAB 2 — NOTES & RÉSULTATS ═══════════════════════════ */}
                     {activeTab === 2 && (
                         <Grid container spacing={2.5}>
                             <Grid item xs={12} md={6}>
@@ -944,7 +935,6 @@ export default function Stats() {
                                         <Typography sx={{ fontSize: '0.73rem', color: '#94A3B8', mb: 2.5 }}>
                                             Évaluations des participants · {primaryYear}
                                         </Typography>
-
                                         {isLoadingCurrent ? (
                                             <Box>{[1, 2, 3, 4].map(i => <Skeleton key={i} height={50} sx={{ mb: 1 }} />)}</Box>
                                         ) : (stats?.notesMoyennesParDomaine?.filter(d => d.note != null).length > 0) ? (
@@ -971,7 +961,6 @@ export default function Stats() {
 
                             <Grid item xs={12} md={6}>
                                 <Grid container spacing={2.5}>
-                                    {/* Radar des notes */}
                                     <Grid item xs={12}>
                                         <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none' }}>
                                             <CardContent sx={{ p: 3 }}>
@@ -995,20 +984,8 @@ export default function Stats() {
                                                         >
                                                             <PolarGrid stroke="#E2E8F0" />
                                                             <PolarAngleAxis dataKey="domaine" tick={{ fontSize: 9, fill: '#64748B' }} />
-                                                            <PolarRadiusAxis
-                                                                angle={30}
-                                                                domain={[0, 20]}
-                                                                tick={{ fontSize: 9, fill: '#94A3B8' }}
-                                                                tickCount={4}
-                                                            />
-                                                            <Radar
-                                                                name="Note moy."
-                                                                dataKey="note"
-                                                                stroke="#6366F1"
-                                                                fill="#6366F1"
-                                                                fillOpacity={0.18}
-                                                                strokeWidth={2}
-                                                            />
+                                                            <PolarRadiusAxis angle={30} domain={[0, 20]} tick={{ fontSize: 9, fill: '#94A3B8' }} tickCount={4} />
+                                                            <Radar name="Note moy." dataKey="note" stroke="#6366F1" fill="#6366F1" fillOpacity={0.18} strokeWidth={2} />
                                                             <Tooltip content={<RadarTooltip />} />
                                                         </RadarChart>
                                                     </ResponsiveContainer>
@@ -1017,7 +994,6 @@ export default function Stats() {
                                         </Card>
                                     </Grid>
 
-                                    {/* Taux présence & note globale */}
                                     <Grid item xs={6}>
                                         <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', textAlign: 'center' }}>
                                             <CardContent sx={{ p: 2.5 }}>
@@ -1040,9 +1016,7 @@ export default function Stats() {
                                                     Note globale
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '2rem', fontWeight: 800, color: '#8B5CF6' }}>
-                                                    {stats?.noteMoyenneGlobale != null
-                                                        ? `${Number(stats.noteMoyenneGlobale).toFixed(1)}`
-                                                        : '—'}
+                                                    {stats?.noteMoyenneGlobale != null ? `${Number(stats.noteMoyenneGlobale).toFixed(1)}` : '—'}
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '0.68rem', color: '#94A3B8' }}>/20</Typography>
                                             </CardContent>
@@ -1053,12 +1027,9 @@ export default function Stats() {
                         </Grid>
                     )}
 
-                    {/* ══════════════════════════════════════════════════════════════
-                        TAB 3 — BUDGET & FINANCES
-                    ══════════════════════════════════════════════════════════════ */}
+                    {/* ══ TAB 3 — BUDGET & FINANCES ═══════════════════════════ */}
                     {activeTab === 3 && (
                         <Grid container spacing={2.5}>
-                            {/* KPIs budget */}
                             {[
                                 {
                                     label: 'Budget total réalisé',
@@ -1095,7 +1066,6 @@ export default function Stats() {
                                 </Grid>
                             ))}
 
-                            {/* Budget trimestriel */}
                             <Grid item xs={12} md={7}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -1112,12 +1082,7 @@ export default function Stats() {
                                                 <BarChart data={stats?.budgetParTrimestre || []} barSize={36}>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                                                     <XAxis dataKey="trimestre" tick={{ fontSize: 12, fill: '#475569', fontWeight: 700 }} axisLine={false} />
-                                                    <YAxis
-                                                        tick={{ fontSize: 10, fill: '#94A3B8' }}
-                                                        axisLine={false}
-                                                        tickLine={false}
-                                                        tickFormatter={v => `${Math.round(v / 1000)}k`}
-                                                    />
+                                                    <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={v => `${Math.round(v / 1000)}k`} />
                                                     <Tooltip content={<CustomTooltip />} />
                                                     <Legend wrapperStyle={{ fontSize: '0.75rem', paddingTop: 8 }} />
                                                     <Bar dataKey="budget" name="Budget réalisé" fill="#6366F1" radius={[6, 6, 0, 0]} animationDuration={1000} />
@@ -1129,7 +1094,6 @@ export default function Stats() {
                                 </Card>
                             </Grid>
 
-                            {/* Budget par domaine (donut) */}
                             <Grid item xs={12} md={5}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -1180,12 +1144,9 @@ export default function Stats() {
                         </Grid>
                     )}
 
-                    {/* ══════════════════════════════════════════════════════════════
-                        TAB 4 — FORMATEURS
-                    ══════════════════════════════════════════════════════════════ */}
+                    {/* ══ TAB 4 — FORMATEURS ══════════════════════════════════ */}
                     {activeTab === 4 && (
                         <Grid container spacing={2.5}>
-                            {/* Performance des formateurs */}
                             <Grid item xs={12} lg={8}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -1230,7 +1191,6 @@ export default function Stats() {
                                 </Card>
                             </Grid>
 
-                            {/* Donut internes/externes + stats */}
                             <Grid item xs={12} lg={4}>
                                 <Grid container spacing={2.5}>
                                     <Grid item xs={12}>
@@ -1283,12 +1243,9 @@ export default function Stats() {
                         </Grid>
                     )}
 
-                    {/* ══════════════════════════════════════════════════════════════
-                        TAB 5 — COMPARATIF ANNUEL
-                    ══════════════════════════════════════════════════════════════ */}
+                    {/* ══ TAB 5 — COMPARATIF ANNUEL ═══════════════════════════ */}
                     {activeTab === 5 && (
                         <Grid container spacing={2.5}>
-                            {/* Tendance pluriannuelle */}
                             <Grid item xs={12}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -1319,7 +1276,7 @@ export default function Stats() {
                                         </Box>
 
                                         <ResponsiveContainer width="100%" height={260}>
-                                            <BarChart data={annualTrend} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                                            <AreaChart data={annualTrend} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                                                 <defs>
                                                     <linearGradient id={`annGrad-${chartMetric}`} x1="0" y1="0" x2="0" y2="1">
                                                         <stop offset="5%" stopColor={METRIC_COLORS[chartMetric] || '#6366F1'} stopOpacity={0.25} />
@@ -1356,13 +1313,12 @@ export default function Stats() {
                                                     activeDot={{ r: 8, strokeWidth: 0, fill: METRIC_COLORS[chartMetric] || '#6366F1' }}
                                                     animationDuration={1200}
                                                 />
-                                            </BarChart>
+                                            </AreaChart>
                                         </ResponsiveContainer>
                                     </CardContent>
                                 </Card>
                             </Grid>
 
-                            {/* Barres comparatives par indicateur */}
                             <Grid item xs={12} md={6}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -1417,7 +1373,6 @@ export default function Stats() {
                                 </Card>
                             </Grid>
 
-                            {/* Tableau récapitulatif */}
                             <Grid item xs={12}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none' }}>
                                     <CardContent sx={{ p: 3 }}>

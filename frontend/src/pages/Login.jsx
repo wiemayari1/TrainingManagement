@@ -8,7 +8,6 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 
-/* ─── Icônes inline ─── */
 const UserLabelIcon = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -23,7 +22,6 @@ const LockLabelIcon = () => (
     </svg>
 );
 
-/* ─── Fond identique à la photo ─── */
 const Background = () => (
     <Box sx={{
         position: 'fixed',
@@ -31,7 +29,6 @@ const Background = () => (
         zIndex: 0,
         background: 'linear-gradient(160deg, #0f0c29 0%, #1a103c 40%, #0f172a 70%, #1e1b4b 100%)',
     }}>
-        {/* Vagues supérieures gauche */}
         <svg style={{ position: 'absolute', top: 0, left: 0, width: '60%', height: '50%', opacity: 0.25 }}>
             <defs>
                 <linearGradient id="w1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -65,7 +62,6 @@ const Background = () => (
             />
         </svg>
 
-        {/* Vagues inférieures droite */}
         <svg style={{ position: 'absolute', bottom: 0, right: 0, width: '60%', height: '50%', opacity: 0.2 }}>
             <defs>
                 <linearGradient id="w2" x1="100%" y1="100%" x2="0%" y2="0%">
@@ -87,20 +83,11 @@ const Background = () => (
             />
         </svg>
 
-        {/* Particules / points lumineux */}
         {[...Array(25)].map((_, i) => (
             <motion.div
                 key={i}
-                animate={{
-                    opacity: [0, 0.8, 0],
-                    scale: [0, 1, 0],
-                }}
-                transition={{
-                    duration: 2 + Math.random() * 3,
-                    repeat: Infinity,
-                    delay: Math.random() * 5,
-                    ease: "easeInOut"
-                }}
+                animate={{ opacity: [0, 0.8, 0], scale: [0, 1, 0] }}
+                transition={{ duration: 2 + Math.random() * 3, repeat: Infinity, delay: Math.random() * 5, ease: "easeInOut" }}
                 style={{
                     position: 'absolute',
                     left: `${Math.random() * 100}%`,
@@ -109,30 +96,13 @@ const Background = () => (
                     height: Math.random() * 3 + 2,
                     borderRadius: '50%',
                     background: i % 2 === 0 ? 'rgba(168, 85, 247, 0.7)' : 'rgba(99, 102, 241, 0.6)',
-                    boxShadow: i % 2 === 0
-                        ? '0 0 8px rgba(168, 85, 247, 0.8)'
-                        : '0 0 8px rgba(99, 102, 241, 0.8)',
+                    boxShadow: i % 2 === 0 ? '0 0 8px rgba(168, 85, 247, 0.8)' : '0 0 8px rgba(99, 102, 241, 0.8)',
                 }}
             />
         ))}
 
-        {/* Glows diffus */}
-        <Box sx={{
-            position: 'absolute',
-            width: 500, height: 500,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)',
-            top: '5%', left: '-5%',
-            filter: 'blur(80px)',
-        }} />
-        <Box sx={{
-            position: 'absolute',
-            width: 400, height: 400,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%)',
-            bottom: '5%', right: '-5%',
-            filter: 'blur(80px)',
-        }} />
+        <Box sx={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)', top: '5%', left: '-5%', filter: 'blur(80px)' }} />
+        <Box sx={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%)', bottom: '5%', right: '-5%', filter: 'blur(80px)' }} />
     </Box>
 );
 
@@ -199,7 +169,7 @@ export default function Login() {
                 variants={cardVariants}
                 initial="hidden"
                 animate="visible"
-                style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 840 }}
+                style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 900 }}
             >
                 <Paper elevation={0} sx={{
                     borderRadius: '24px',
@@ -209,9 +179,8 @@ export default function Login() {
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: { xs: 'column', md: 'row' },
-                    minHeight: 500,
+                    minHeight: 520,
                 }}>
-                    {/* Ligne dégradée supérieure */}
                     <Box sx={{
                         position: 'absolute',
                         top: 0, left: 0, right: 0,
@@ -220,15 +189,14 @@ export default function Login() {
                         zIndex: 2,
                     }} />
 
-                    {/* ═════ COLONNE GAUCHE ═════ */}
                     <Box sx={{
-                        width: { xs: '100%', md: '45%' },
+                        width: { xs: '100%', md: '46%' },
                         bgcolor: '#F5F3FF',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        p: { xs: 3, md: 4 },
+                        p: { xs: 3, md: 3 },
                         position: 'relative',
                         overflow: 'hidden',
                     }}>
@@ -253,10 +221,8 @@ export default function Login() {
                             animate="visible"
                             style={{ width: '100%', textAlign: 'center', position: 'relative', zIndex: 1 }}
                         >
-                            {/* ─── LOGO ─── */}
                             <motion.div variants={itemVariants}>
                                 <Box sx={{
-                                    mb: 4,
                                     display: 'flex',
                                     justifyContent: 'center',
                                     alignItems: 'center',
@@ -265,54 +231,21 @@ export default function Login() {
                                         src="/assets/logo.png"
                                         alt="Logo Excellent Training"
                                         style={{
-                                            maxWidth: '220px',
-                                            width: '100%',
+                                            width: '95%',
+                                            maxWidth: '380px',
                                             height: 'auto',
+                                            maxHeight: '380px',
                                             objectFit: 'contain',
                                             filter: 'drop-shadow(0 8px 16px rgba(99,102,241,0.2))',
                                         }}
                                     />
                                 </Box>
                             </motion.div>
-
-                            <motion.div variants={itemVariants}>
-                                <Box sx={{
-                                    width: 32, height: 3,
-                                    bgcolor: '#C4B5FD',
-                                    borderRadius: 2,
-                                    mx: 'auto',
-                                    mb: 3,
-                                }} />
-                            </motion.div>
-
-                            <motion.div variants={itemVariants}>
-                                <Typography sx={{
-                                    color: '#475569',
-                                    fontSize: '0.9rem',
-                                    fontStyle: 'italic',
-                                    maxWidth: 240,
-                                    mx: 'auto',
-                                    lineHeight: 1.5,
-                                    mb: 2,
-                                }}>
-                                    « Développez vos compétences,<br />construisez votre avenir. »
-                                </Typography>
-                            </motion.div>
-
-                            <motion.div variants={itemVariants}>
-                                <Box sx={{
-                                    width: 32, height: 3,
-                                    bgcolor: '#C4B5FD',
-                                    borderRadius: 2,
-                                    mx: 'auto',
-                                }} />
-                            </motion.div>
                         </motion.div>
                     </Box>
 
-                    {/* ═════ COLONNE DROITE ═════ */}
                     <Box sx={{
-                        width: { xs: '100%', md: '55%' },
+                        width: { xs: '100%', md: '54%' },
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
@@ -374,10 +307,7 @@ export default function Login() {
                                                 bgcolor: '#F9FAFB',
                                                 fontSize: '0.95rem',
                                                 py: 0.1,
-                                                '& fieldset': {
-                                                    borderColor: '#E5E7EB',
-                                                    borderWidth: '1.5px',
-                                                },
+                                                '& fieldset': { borderColor: '#E5E7EB', borderWidth: '1.5px' },
                                                 '&:hover fieldset': { borderColor: '#C4B5FD' },
                                                 '&.Mui-focused fieldset': {
                                                     borderColor: '#6366F1',
@@ -421,10 +351,7 @@ export default function Login() {
                                                 bgcolor: '#F9FAFB',
                                                 fontSize: '0.95rem',
                                                 py: 0.1,
-                                                '& fieldset': {
-                                                    borderColor: '#E5E7EB',
-                                                    borderWidth: '1.5px',
-                                                },
+                                                '& fieldset': { borderColor: '#E5E7EB', borderWidth: '1.5px' },
                                                 '&:hover fieldset': { borderColor: '#C4B5FD' },
                                                 '&.Mui-focused fieldset': {
                                                     borderColor: '#6366F1',
