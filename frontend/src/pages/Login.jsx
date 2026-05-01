@@ -188,7 +188,7 @@ export default function Login() {
                                         src="/assets/logo.png"
                                         alt="Logo Excellent Training"
                                         style={{
-                                            width: '95%',
+                                            width: '80%',
                                             maxWidth: '380px',
                                             height: 'auto',
                                             maxHeight: '380px',
