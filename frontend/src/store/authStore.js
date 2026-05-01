@@ -10,6 +10,42 @@ export const useAuthStore = create(
             isLoading: false,
             error: null,
 
+            initializeAuth: () => {
+                const token = getToken();
+                if (!token) {
+                    set({ user: null, isAuthenticated: false });
+                    return false;
+                }
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    if (payload.exp * 1000 < Date.now()) {
+                        clearToken();
+                        set({ user: null, isAuthenticated: false });
+                        return false;
+                    }
+                    const currentUser = get().user;
+                    if (!currentUser && payload.sub) {
+                        set({
+                            user: {
+                                id: payload.id || payload.sub,
+                                login: payload.sub,
+                                email: payload.email || '',
+                                role: payload.role || 'ROLE_USER',
+                                firstLogin: payload.firstLogin === true,
+                            },
+                            isAuthenticated: true,
+                        });
+                    } else {
+                        set({ isAuthenticated: true });
+                    }
+                    return true;
+                } catch {
+                    clearToken();
+                    set({ user: null, isAuthenticated: false });
+                    return false;
+                }
+            },
+
             login: async (login, password) => {
                 set({ isLoading: true, error: null });
                 try {
@@ -31,7 +67,6 @@ export const useAuthStore = create(
                         throw new Error('Token manquant dans la réponse serveur');
                     }
 
-                    // Stocker le token
                     setToken(data.token);
 
                     const user = {
@@ -46,7 +81,7 @@ export const useAuthStore = create(
                     return { success: true, user };
                 } catch (error) {
                     set({ isLoading: false, error: error.message });
-                    return { success: false, error: 'Identifiants incorrects ou erreur serveur.' };
+                    return { success: false, error: error.message };
                 }
             },
 
@@ -78,21 +113,8 @@ export const useAuthStore = create(
                 }));
             },
 
-            // Vérifie si le token est encore valide sans modifier l'état
             checkAuth: () => {
-                const token = getToken();
-                if (!token) return false;
-                try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    if (payload.exp * 1000 < Date.now()) {
-                        clearToken();
-                        return false;
-                    }
-                    return true;
-                } catch {
-                    clearToken();
-                    return false;
-                }
+                return get().initializeAuth();
             },
 
             hasRole: (role) => {
@@ -144,7 +166,7 @@ export const useAuthStore = create(
                     role: state.user.role,
                     firstLogin: state.user.firstLogin,
                 } : null,
-                isAuthenticated: state.isAuthenticated,
+                isAuthenticated: false,
             }),
         }
     )

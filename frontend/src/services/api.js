@@ -5,71 +5,77 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8081/api';
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  withCredentials: false,
+  withCredentials: true,
   timeout: 30000,
 });
 
 let logoutCallback = null;
 export const setLogoutCallback = (cb) => { logoutCallback = cb; };
 
-// ── Token stocké en localStorage pour survivre aux rechargements de page ──────
-// sessionStorage se vide à chaque rechargement ce qui causait les 401
-const TOKEN_KEY = '_auth_token';
+let inMemoryToken = null;
 
 export const setToken = (token) => {
+  inMemoryToken = token;
   if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.setItem('_t', token);
   } else {
-    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem('_t');
   }
 };
 
 export const getToken = () => {
-  return localStorage.getItem(TOKEN_KEY) || null;
+  if (!inMemoryToken) {
+    inMemoryToken = sessionStorage.getItem('_t') || null;
+  }
+  return inMemoryToken;
 };
 
 export const clearToken = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  // Nettoyer aussi l'ancienne clé sessionStorage si elle existe
+  inMemoryToken = null;
   sessionStorage.removeItem('_t');
+  localStorage.removeItem('token');
 };
 
-// ── Intercepteur requête ─────────────────────────────────────────────────────
 api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  delete config.headers['X-Forwarded-For'];
   return config;
 });
 
-// ── Intercepteur réponse ─────────────────────────────────────────────────────
 api.interceptors.response.use(
     (res) => res,
     (err) => {
       if (err.response?.status === 401) {
-        // Vérifier que c'est bien un problème de token et pas autre chose
         const token = getToken();
-        if (!token) {
-          // Pas de token → rediriger vers login
-          clearToken();
-          if (logoutCallback) logoutCallback();
-          else window.location.href = '/login';
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.exp * 1000 < Date.now()) {
+              clearToken();
+              if (logoutCallback) logoutCallback();
+              else window.location.href = '/login';
+            }
+          } catch {
+            clearToken();
+            if (logoutCallback) logoutCallback();
+            else window.location.href = '/login';
+          }
         } else {
-          // Token présent mais rejeté → token expiré ou invalide
           clearToken();
           if (logoutCallback) logoutCallback();
           else window.location.href = '/login';
         }
       }
       if (err.response?.status >= 500) {
-        console.error('Erreur serveur:', err.response?.status, err.response?.data);
+        console.error('Erreur serveur:', err.response?.status);
       }
       return Promise.reject(err);
     }
 );
 
-// ── Services ─────────────────────────────────────────────────────────────────
 export const formationService = {
   getAll: (annee) => api.get('/formations', { params: annee ? { annee } : {} }),
   getById: (id) => api.get(`/formations/${id}`),

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -8,12 +8,10 @@ import { useAuthStore } from './store/authStore';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
-// Pages publiques
 import Login from './pages/Login';
 import FirstLogin from './pages/FirstLogin';
 import { ForgotPassword, ResetPassword } from './pages/ForgotPassword';
 
-// Pages protégées
 import Dashboard from './pages/Dashboard';
 import Formations from './pages/Formations';
 import Participants from './pages/Participants';
@@ -39,12 +37,17 @@ function App() {
 }
 
 function AppRoutes() {
-    const { isAuthenticated, needsPasswordChange } = useAuthStore();
+    const { isAuthenticated, needsPasswordChange, initializeAuth } = useAuthStore();
+
+    useEffect(() => {
+        initializeAuth();
+    }, []);
 
     if (!isAuthenticated) {
         return (
             <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/first-login" element={<FirstLogin />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
@@ -63,36 +66,32 @@ function AppRoutes() {
 
     return (
         <Routes>
-            <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/forgot-password" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/reset-password" element={<Navigate to="/dashboard" replace />} />
-
-            <Route path="/profile" element={<Profile />} />
-
-            <Route element={<Layout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-
-                <Route element={<ProtectedRoute allowedRoles={['ROLE_USER', 'ROLE_ADMIN']} />}>
-                    <Route path="/formations" element={<Formations />} />
-                    <Route path="/participants" element={<Participants />} />
-                    <Route path="/formateurs" element={<Formateurs />} />
+            <Route path="/" element={<Layout />}>
+                <Route index element={<Navigate to="/dashboard" replace />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="formations" element={<Formations />} />
+                <Route path="participants" element={<Participants />} />
+                <Route path="formateurs" element={<Formateurs />} />
+                <Route path="stats" element={
+                    <ProtectedRoute allowedRoles={['ROLE_RESPONSABLE', 'ROLE_ADMIN']}>
+                        <Stats />
+                    </ProtectedRoute>
+                } />
+                <Route path="profile" element={<Profile />} />
+                <Route path="admin" element={
+                    <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                        <Admin />
+                    </ProtectedRoute>
+                }>
+                    <Route index element={<Navigate to="users" replace />} />
+                    <Route path="users" element={<AdminUsers />} />
+                    <Route path="structures" element={<AdminStructures />} />
+                    <Route path="domaines" element={<AdminDomaines />} />
+                    <Route path="profils" element={<AdminProfils />} />
+                    <Route path="employeurs" element={<AdminEmployeurs />} />
                 </Route>
-
-                <Route element={<ProtectedRoute allowedRoles={['ROLE_RESPONSABLE', 'ROLE_ADMIN']} />}>
-                    <Route path="/stats" element={<Stats />} />
-                </Route>
-
-                <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
-                    <Route path="/admin" element={<Admin />} />
-                    <Route path="/admin/users" element={<AdminUsers />} />
-                    <Route path="/admin/structures" element={<AdminStructures />} />
-                    <Route path="/admin/domaines" element={<AdminDomaines />} />
-                    <Route path="/admin/profils" element={<AdminProfils />} />
-                    <Route path="/admin/employeurs" element={<AdminEmployeurs />} />
-                </Route>
-
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
     );
 }
