@@ -1,22 +1,23 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
     Box, Grid, Card, CardContent, Typography, FormControl,
-    Select, MenuItem, LinearProgress, Chip, Avatar,
+    Select, MenuItem, LinearProgress, Chip,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Tabs, Tab, ToggleButton, ToggleButtonGroup, Skeleton,
 } from '@mui/material';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, AreaChart, Area, LineChart, Line,
+    PieChart, Pie, Cell, AreaChart, Area, Line,
     RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
-    ComposedChart, ReferenceLine, Legend,
+    Legend,
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { statsService } from '../services/api';
 import {
     School, People, Person, AttachMoney, TrendingUp, TrendingDown,
-    EmojiEvents, CheckCircle, Assessment, Star, AutoGraph,
-    Dashboard, Timeline, AssignmentTurnedIn, AccountBalanceWallet, RecordVoiceOver, DateRange
+    CheckCircle, Star,
+    Dashboard, ShowChart, FactCheck, AccountBalance, Groups, CalendarToday,
+    BarChart as BarChartIcon
 } from '@mui/icons-material';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -36,6 +37,14 @@ const COLORS = {
 const DOMAIN_PALETTE = ['#6366F1', '#10B981', '#F59E0B', '#F43F5E', '#06B6D4', '#8B5CF6', '#F97316'];
 const YEAR_PALETTE = ['#6366F1', '#10B981', '#F59E0B', '#F43F5E', '#06B6D4'];
 
+const METRIC_COLORS = {
+    formations: '#6366F1',
+    participants: '#10B981',
+    budget: '#F59E0B',
+    tauxPresence: '#06B6D4',
+    noteMoyenne: '#8B5CF6',
+};
+
 // ── Tooltip personnalisé ──────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -48,19 +57,205 @@ const CustomTooltip = ({ active, payload, label }) => {
             <Typography sx={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, mb: 0.8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {label}
             </Typography>
-            {payload.map((p, i) => (
-                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mt: 0.4 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
-                        <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: p.color || p.fill }} />
-                        <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>{p.name}</Typography>
+            {payload.map((p, i) => {
+                let displayValue = p.value ?? '—';
+                const name = p.name || '';
+                if (typeof p.value === 'number') {
+                    if (name.includes('Budget') || name.includes('DT') || name.includes('budget')) {
+                        displayValue = `${p.value.toLocaleString('fr-FR')} DT`;
+                    } else if (name.includes('%') || name.includes('Présence') || name.includes('Taux') || name.includes('présence')) {
+                        displayValue = `${p.value}%`;
+                    } else if (name.includes('Note') || name.includes('/20')) {
+                        displayValue = `${p.value.toFixed(1)}`;
+                    } else {
+                        displayValue = p.value.toLocaleString('fr-FR');
+                    }
+                }
+                return (
+                    <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mt: 0.4 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                            <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: p.color || p.fill }} />
+                            <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>{p.name}</Typography>
+                        </Box>
+                        <Typography sx={{ fontSize: '0.78rem', color: '#F1F5F9', fontWeight: 700 }}>
+                            {displayValue}
+                        </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: '0.78rem', color: '#F1F5F9', fontWeight: 700 }}>
-                        {typeof p.value === 'number' && p.value > 999
-                            ? `${p.value.toLocaleString('fr-FR')} DT`
-                            : p.value ?? '—'}
-                    </Typography>
+                );
+            })}
+        </Box>
+    );
+};
+
+// ── Tooltip Radar personnalisé ────────────────────────────────────────────────
+const RadarTooltip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    return (
+        <Box sx={{
+            bgcolor: '#0F172A', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '10px', p: '10px 14px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)', minWidth: 140,
+        }}>
+            <Typography sx={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, mb: 0.8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {payload[0]?.payload?.domaine}
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                    <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#6366F1' }} />
+                    <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>Note moy.</Typography>
                 </Box>
-            ))}
+                <Typography sx={{ fontSize: '0.78rem', color: '#F1F5F9', fontWeight: 700 }}>
+                    {payload[0]?.value?.toFixed(1)}/20
+                </Typography>
+            </Box>
+        </Box>
+    );
+};
+
+// ── Graphique Barres + Ligne alignés via BarChart (stable) ───────────────────
+const CustomBarLineChart = ({
+                                chartId,
+                                data,
+                                barKey,
+                                lineKey,
+                                nameKey = 'name',
+                                barColors,
+                                lineColor = '#F59E0B',
+                                barName = 'Valeur',
+                                lineName = 'Ligne',
+                                height = 260,
+                                leftDomain,
+                                rightDomain,
+                                rightTickFormatter,
+                                xAngle = 0,
+                                xHeight = 30,
+                                barSize = 30,
+                                tooltipFormatter,
+                            }) => {
+    const colorMap = useMemo(() => {
+        if (!Array.isArray(barColors)) return {};
+        const map = {};
+        data?.forEach((d, i) => {
+            map[d[nameKey]] = barColors[i % barColors.length];
+        });
+        return map;
+    }, [data, barColors, nameKey]);
+
+    return (
+        <Box sx={{ width: '100%', height }}>
+            <ResponsiveContainer width="100%" height={height}>
+                {/* BarChart accepte Bar + Line et gère mieux l'alignement que ComposedChart */}
+                <BarChart
+                    key={chartId}
+                    data={data}
+                    barCategoryGap="20%"
+                    margin={{ top: 20, right: 50, left: 10, bottom: xHeight }}
+                >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                    <XAxis
+                        dataKey={nameKey}
+                        type="category"
+                        scale="point"                       // ← garantit que ticks = centre des barres
+                        padding={{ left: barSize, right: barSize }} // ← symétrie parfaite
+                        tick={{ fontSize: 10, fill: '#64748B' }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        angle={xAngle}
+                        textAnchor={xAngle !== 0 ? 'end' : 'middle'}
+                        height={xHeight}
+                    />
+                    <YAxis
+                        yAxisId="l"
+                        tick={{ fontSize: 10, fill: '#94A3B8' }}
+                        axisLine={false}
+                        tickLine={false}
+                        domain={leftDomain}
+                        allowDataOverflow={!!leftDomain}
+                    />
+                    <YAxis
+                        yAxisId="r"
+                        orientation="right"
+                        tick={{ fontSize: 10, fill: '#94A3B8' }}
+                        axisLine={false}
+                        tickLine={false}
+                        domain={rightDomain}
+                        allowDataOverflow={!!rightDomain}
+                        tickFormatter={rightTickFormatter}
+                    />
+                    <Tooltip
+                        content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null;
+                            const barItem = payload.find(p => p.dataKey === barKey);
+                            const lineItem = payload.find(p => p.dataKey === lineKey);
+                            const barVal = barItem?.value;
+                            const lineVal = lineItem?.value;
+                            const barFillColor = colorMap[label] || (Array.isArray(barColors) ? barColors[0] : barColors) || '#6366F1';
+
+                            return (
+                                <Box sx={{
+                                    bgcolor: '#0F172A', border: '1px solid rgba(255,255,255,0.08)',
+                                    borderRadius: '10px', p: '10px 14px',
+                                    boxShadow: '0 20px 40px rgba(0,0,0,0.5)', minWidth: 150,
+                                }}>
+                                    <Typography sx={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, mb: 0.8, textTransform: 'uppercase' }}>
+                                        {label}
+                                    </Typography>
+                                    {barVal != null && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.4 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                                                <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: barFillColor }} />
+                                                <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>{barName}</Typography>
+                                            </Box>
+                                            <Typography sx={{ fontSize: '0.78rem', color: '#F1F5F9', fontWeight: 700 }}>
+                                                {tooltipFormatter ? tooltipFormatter(barVal, barKey) : barVal}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                    {lineVal != null && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.4 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
+                                                <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: lineColor }} />
+                                                <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>{lineName}</Typography>
+                                            </Box>
+                                            <Typography sx={{ fontSize: '0.78rem', color: '#F1F5F9', fontWeight: 700 }}>
+                                                {tooltipFormatter ? tooltipFormatter(lineVal, lineKey) : lineVal}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Box>
+                            );
+                        }}
+                    />
+                    <Bar
+                        yAxisId="l"
+                        dataKey={barKey}
+                        name={barName}
+                        maxBarSize={barSize}
+                        animationDuration={1000}
+                        radius={[6, 6, 0, 0]}
+                    >
+                        {data.map((entry) => (
+                            <Cell
+                                key={`cell-${entry[nameKey]}`}
+                                fill={colorMap[entry[nameKey]] || (Array.isArray(barColors) ? barColors[0] : barColors) || '#6366F1'}
+                            />
+                        ))}
+                    </Bar>
+                    <Line
+                        yAxisId="r"
+                        type="monotone"
+                        dataKey={lineKey}
+                        name={lineName}
+                        stroke={lineColor}
+                        strokeWidth={3}
+                        dot={{ r: 5, fill: lineColor, stroke: '#fff', strokeWidth: 2 }}
+                        activeDot={{ r: 7, strokeWidth: 0, fill: lineColor }}
+                        animationDuration={1000}
+                        animationBegin={0}
+                    />
+                </BarChart>
+            </ResponsiveContainer>
         </Box>
     );
 };
@@ -81,7 +276,6 @@ function KpiCard({ icon, label, value, color, bg, trend, sub, delay = 0, loading
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': { transform: 'translateY(-2px)', boxShadow: `0 8px 32px ${color}18` },
             }}>
-                {/* Accent line top */}
                 <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, bgcolor: color, opacity: 0.7 }} />
                 <CardContent sx={{ p: 2.5, pt: 3 }}>
                     {loading ? (
@@ -162,12 +356,19 @@ function DomainNoteBar({ domaine, note, pourcentage, color, index }) {
                         }}
                     />
                 </Box>
-                {/* Seuil 70% */}
-                <Box sx={{ position: 'relative', mt: 0.3 }}>
+                <Box sx={{ position: 'relative', mt: 0.3, height: 16 }}>
                     <Box sx={{
-                        position: 'absolute', left: '70%', top: -10, width: 1, height: 10,
-                        bgcolor: '#EF4444', opacity: 0.4,
+                        position: 'absolute', left: '70%', top: -12, width: 2, height: 16,
+                        bgcolor: '#EF4444', opacity: 0.5, borderRadius: 1,
                     }} />
+                    <Typography sx={{
+                        position: 'absolute', left: '70%', top: -24,
+                        transform: 'translateX(-50%)',
+                        fontSize: '0.6rem', color: '#EF4444', fontWeight: 700,
+                        bgcolor: 'rgba(255,255,255,0.9)', px: 0.5, borderRadius: 0.5,
+                    }}>
+                        70%
+                    </Typography>
                 </Box>
             </Box>
         </motion.div>
@@ -229,19 +430,24 @@ export default function Stats() {
         const init = async () => {
             setLoading(true);
             await loadYear(primaryYear);
-            // Charger les autres années en arrière-plan
             Promise.all(ALL_YEARS.filter(y => y !== primaryYear).map(loadYear));
             setLoading(false);
         };
         init();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleYearChange = async (year) => {
         setPrimaryYear(year);
         if (!allStats[year]) {
             setLoadingYear(true);
-            await loadYear(year);
-            setLoadingYear(false);
+            try {
+                await loadYear(year);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoadingYear(false);
+            }
         }
     };
 
@@ -254,7 +460,16 @@ export default function Stats() {
         return `${pct >= 0 ? '+' : ''}${pct}%`;
     };
 
-    // Données comparatif annuel
+    // ── Données mémoïsées pour les graphes combo ──
+    const domaineData = useMemo(() => stats?.formationsParDomaine || [], [stats?.formationsParDomaine]);
+    const topFormateursData = useMemo(() =>
+            stats?.topFormateurs?.map(f => ({
+                name: `${f.prenom} ${f.nom?.substring(0, 1) || ''}.`,
+                formations: f.nbFormations || 0,
+                note: f.noteMoyenne || 0,
+            })) || [],
+        [stats?.topFormateurs]);
+
     const annualTrend = ALL_YEARS.map(y => {
         const d = allStats[y];
         return {
@@ -276,11 +491,11 @@ export default function Stats() {
 
     const TABS = [
         { label: 'Vue d\'ensemble', icon: <Dashboard fontSize="small" /> },
-        { label: 'Évolution mensuelle', icon: <Timeline fontSize="small" /> },
-        { label: 'Notes & Résultats', icon: <AssignmentTurnedIn fontSize="small" /> },
-        { label: 'Budget & Finances', icon: <AccountBalanceWallet fontSize="small" /> },
-        { label: 'Formateurs', icon: <RecordVoiceOver fontSize="small" /> },
-        { label: 'Comparatif annuel', icon: <DateRange fontSize="small" /> },
+        { label: 'Évolution mensuelle', icon: <ShowChart fontSize="small" /> },
+        { label: 'Notes & Résultats', icon: <FactCheck fontSize="small" /> },
+        { label: 'Budget & Finances', icon: <AccountBalance fontSize="small" /> },
+        { label: 'Formateurs', icon: <Groups fontSize="small" /> },
+        { label: 'Comparatif annuel', icon: <CalendarToday fontSize="small" /> },
     ];
 
     const isLoadingCurrent = loading || loadingYear || !stats;
@@ -295,14 +510,13 @@ export default function Stats() {
                     background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F1E3D 100%)',
                     position: 'relative', overflow: 'hidden',
                 }}>
-                    {/* Décorations de fond */}
                     <Box sx={{ position: 'absolute', top: -60, right: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)' }} />
                     <Box sx={{ position: 'absolute', bottom: -40, left: '20%', width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)' }} />
 
                     <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
                         <Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-                                <AutoGraph sx={{ color: '#A5B4FC', fontSize: 26 }} />
+                                <BarChartIcon sx={{ color: '#A5B4FC', fontSize: 26 }} />
                                 <Typography sx={{ fontWeight: 800, fontSize: { xs: '1.3rem', md: '1.6rem' }, color: '#fff', letterSpacing: '-0.02em' }}>
                                     Statistiques & Analyses
                                 </Typography>
@@ -332,7 +546,6 @@ export default function Stats() {
                         </Box>
                     </Box>
 
-                    {/* Barre de progression chargement */}
                     {(loading || loadingYear) && (
                         <LinearProgress sx={{
                             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -421,8 +634,8 @@ export default function Stats() {
                 >
 
                     {/* ══════════════════════════════════════════════════════════════
-                    TAB 0 — VUE D'ENSEMBLE
-                ══════════════════════════════════════════════════════════════ */}
+                        TAB 0 — VUE D'ENSEMBLE
+                    ══════════════════════════════════════════════════════════════ */}
                     {activeTab === 0 && (
                         <Grid container spacing={2.5}>
 
@@ -448,7 +661,8 @@ export default function Stats() {
                                                             cx="50%" cy="50%"
                                                             innerRadius={60} outerRadius={95}
                                                             paddingAngle={3} dataKey="value"
-                                                            stroke="none"
+                                                            stroke="#fff" strokeWidth={2}
+                                                            cornerRadius={4}
                                                         >
                                                             {(stats?.formationsParStatut || []).map((entry, i) => (
                                                                 <Cell key={i} fill={entry.color} />
@@ -498,7 +712,7 @@ export default function Stats() {
                                                     <XAxis type="number" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                                                     <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#475569', fontWeight: 500 }} axisLine={false} tickLine={false} width={120} />
                                                     <Tooltip content={<CustomTooltip />} />
-                                                    <Bar dataKey="participants" name="Participants" radius={[0, 6, 6, 0]}>
+                                                    <Bar dataKey="participants" name="Participants" radius={[0, 6, 6, 0]} animationDuration={1000}>
                                                         {(stats.participantsParStructure || []).map((_, i) => (
                                                             <Cell key={i} fill={DOMAIN_PALETTE[i % DOMAIN_PALETTE.length]} />
                                                         ))}
@@ -535,7 +749,8 @@ export default function Stats() {
                                                             cx="50%" cy="50%"
                                                             innerRadius={60} outerRadius={95}
                                                             paddingAngle={3} dataKey="value" nameKey="name"
-                                                            stroke="none"
+                                                            stroke="#fff" strokeWidth={2}
+                                                            cornerRadius={4}
                                                         >
                                                             {(stats?.formationsParDomaine || []).map((_, i) => (
                                                                 <Cell key={i} fill={DOMAIN_PALETTE[i % DOMAIN_PALETTE.length]} />
@@ -560,7 +775,7 @@ export default function Stats() {
                                 </Card>
                             </Grid>
 
-                            {/* Domaines — formations */}
+                            {/* Domaines — formations & budget */}
                             <Grid item xs={12} md={7}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
@@ -576,24 +791,28 @@ export default function Stats() {
                                         </Box>
                                         {isLoadingCurrent ? (
                                             <Skeleton variant="rounded" width="100%" height={240} />
-                                        ) : (stats?.formationsParDomaine?.length > 0) ? (
-                                            <ResponsiveContainer width="100%" height={240}>
-                                                <ComposedChart data={stats.formationsParDomaine} barSize={28}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                                                    <YAxis yAxisId="l" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                                                    <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false}
-                                                           tickFormatter={v => `${Math.round(v / 1000)}k`} />
-                                                    <Tooltip content={<CustomTooltip />} />
-                                                    <Bar yAxisId="l" dataKey="value" name="Formations" radius={[6, 6, 0, 0]}>
-                                                        {(stats.formationsParDomaine || []).map((_, i) => (
-                                                            <Cell key={i} fill={DOMAIN_PALETTE[i % DOMAIN_PALETTE.length]} />
-                                                        ))}
-                                                    </Bar>
-                                                    <Line yAxisId="r" type="monotone" dataKey="budget" name="Budget (DT)"
-                                                          stroke="#F59E0B" strokeWidth={2.5} dot={{ fill: '#F59E0B', r: 5, strokeWidth: 2, stroke: '#fff' }} />
-                                                </ComposedChart>
-                                            </ResponsiveContainer>
+                                        ) : (domaineData.length > 0) ? (
+                                            <CustomBarLineChart
+                                                chartId={`domaine-${primaryYear}`}
+                                                data={domaineData}
+                                                barKey="value"
+                                                lineKey="budget"
+                                                nameKey="name"
+                                                barColors={DOMAIN_PALETTE}
+                                                lineColor="#F59E0B"
+                                                barName="Formations"
+                                                lineName="Budget (DT)"
+                                                height={260}
+                                                barSize={28}
+                                                xAngle={-20}
+                                                xHeight={50}
+                                                rightTickFormatter={v => `${Math.round(v / 1000)}k`}
+                                                tooltipFormatter={(val, key) =>
+                                                    key === 'budget'
+                                                        ? `${Number(val).toLocaleString('fr-FR')} DT`
+                                                        : val
+                                                }
+                                            />
                                         ) : (
                                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 240, color: '#94A3B8' }}>
                                                 Aucune donnée disponible
@@ -607,8 +826,8 @@ export default function Stats() {
                     )}
 
                     {/* ══════════════════════════════════════════════════════════════
-                    TAB 1 — ÉVOLUTION MENSUELLE
-                ══════════════════════════════════════════════════════════════ */}
+                        TAB 1 — ÉVOLUTION MENSUELLE
+                    ══════════════════════════════════════════════════════════════ */}
                     {activeTab === 1 && (
                         <Grid container spacing={2.5}>
                             <Grid item xs={12}>
@@ -643,25 +862,33 @@ export default function Stats() {
                                             <Skeleton variant="rounded" width="100%" height={300} />
                                         ) : (
                                             <ResponsiveContainer width="100%" height={300}>
-                                                <AreaChart data={stats?.evolutionMensuelle || []} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+                                                <AreaChart data={stats?.evolutionMensuelle || []} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                                                     <defs>
-                                                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#6366F1" stopOpacity={0.2} />
-                                                            <stop offset="95%" stopColor="#6366F1" stopOpacity={0.01} />
+                                                        <linearGradient id={`areaGrad-${chartMetric}`} x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor={METRIC_COLORS[chartMetric] || '#6366F1'} stopOpacity={0.3} />
+                                                            <stop offset="95%" stopColor={METRIC_COLORS[chartMetric] || '#6366F1'} stopOpacity={0.02} />
                                                         </linearGradient>
                                                     </defs>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
                                                     <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                                                    <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false}
-                                                           tickFormatter={chartMetric === 'budget' ? v => `${Math.round(v / 1000)}k` : undefined} />
+                                                    <YAxis
+                                                        tick={{ fontSize: 11, fill: '#94A3B8' }}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tickFormatter={chartMetric === 'budget' ? v => `${Math.round(v / 1000)}k` : undefined}
+                                                    />
                                                     <Tooltip content={<CustomTooltip />} />
                                                     <Area
                                                         type="monotone"
                                                         dataKey={chartMetric}
                                                         name={chartMetric === 'formations' ? 'Formations' : chartMetric === 'participants' ? 'Participants' : 'Budget (DT)'}
-                                                        stroke="#6366F1" fill="url(#areaGrad)" strokeWidth={3}
-                                                        dot={{ fill: '#6366F1', r: 5, strokeWidth: 2, stroke: '#fff' }}
-                                                        activeDot={{ r: 7 }}
+                                                        stroke={METRIC_COLORS[chartMetric] || '#6366F1'}
+                                                        fill={`url(#areaGrad-${chartMetric})`}
+                                                        strokeWidth={3}
+                                                        dot={{ fill: '#fff', r: 5, strokeWidth: 2.5, stroke: METRIC_COLORS[chartMetric] || '#6366F1' }}
+                                                        activeDot={{ r: 7, strokeWidth: 0, fill: METRIC_COLORS[chartMetric] || '#6366F1' }}
+                                                        animationDuration={1200}
+                                                        animationEasing="ease-out"
                                                     />
                                                 </AreaChart>
                                             </ResponsiveContainer>
@@ -671,35 +898,41 @@ export default function Stats() {
                             </Grid>
 
                             {/* Mini cartes mensuelles */}
-                            {(stats?.evolutionMensuelle || []).map((m, i) => (
-                                <Grid item xs={4} sm={3} md={2} key={i}>
-                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}>
-                                        <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: 'none', textAlign: 'center' }}>
-                                            <CardContent sx={{ p: 1.5 }}>
-                                                <Typography sx={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>{m.mois}</Typography>
-                                                <Typography sx={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2, mt: 0.3 }}>
-                                                    {m[chartMetric] ?? 0}
-                                                </Typography>
-                                                <Typography sx={{ fontSize: '0.62rem', color: '#64748B' }}>
-                                                    {chartMetric === 'budget' ? 'DT' : chartMetric}
-                                                </Typography>
-                                                <Box sx={{ mt: 0.8, height: 3, bgcolor: '#F1F5F9', borderRadius: 2, overflow: 'hidden' }}>
-                                                    <Box sx={{
-                                                        height: '100%', borderRadius: 2, bgcolor: '#6366F1',
-                                                        width: `${Math.round(((m[chartMetric] || 0) / (Math.max(...(stats?.evolutionMensuelle || []).map(x => x[chartMetric] || 0)) || 1)) * 100)}%`,
-                                                    }} />
-                                                </Box>
-                                            </CardContent>
-                                        </Card>
-                                    </motion.div>
-                                </Grid>
-                            ))}
+                            {(stats?.evolutionMensuelle || []).map((m, i) => {
+                                const monthlyData = stats?.evolutionMensuelle || [];
+                                const maxMonthly = Math.max(...monthlyData.map(x => x[chartMetric] || 0), 1);
+                                const val = m[chartMetric] || 0;
+                                return (
+                                    <Grid item xs={4} sm={3} md={2} key={i}>
+                                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}>
+                                            <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: 'none', textAlign: 'center' }}>
+                                                <CardContent sx={{ p: 1.5 }}>
+                                                    <Typography sx={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>{m.mois}</Typography>
+                                                    <Typography sx={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2, mt: 0.3 }}>
+                                                        {val}
+                                                    </Typography>
+                                                    <Typography sx={{ fontSize: '0.62rem', color: '#64748B' }}>
+                                                        {chartMetric === 'budget' ? 'DT' : chartMetric}
+                                                    </Typography>
+                                                    <Box sx={{ mt: 0.8, height: 3, bgcolor: '#F1F5F9', borderRadius: 2, overflow: 'hidden' }}>
+                                                        <Box sx={{
+                                                            height: '100%', borderRadius: 2, bgcolor: METRIC_COLORS[chartMetric] || '#6366F1',
+                                                            width: `${Math.round((val / maxMonthly) * 100)}%`,
+                                                            transition: 'width 0.6s ease-out',
+                                                        }} />
+                                                    </Box>
+                                                </CardContent>
+                                            </Card>
+                                        </motion.div>
+                                    </Grid>
+                                );
+                            })}
                         </Grid>
                     )}
 
                     {/* ══════════════════════════════════════════════════════════════
-                    TAB 2 — NOTES & RÉSULTATS
-                ══════════════════════════════════════════════════════════════ */}
+                        TAB 2 — NOTES & RÉSULTATS
+                    ══════════════════════════════════════════════════════════════ */}
                     {activeTab === 2 && (
                         <Grid container spacing={2.5}>
                             <Grid item xs={12} md={6}>
@@ -709,8 +942,7 @@ export default function Stats() {
                                             Notes moyennes par domaine
                                         </Typography>
                                         <Typography sx={{ fontSize: '0.73rem', color: '#94A3B8', mb: 2.5 }}>
-                                            Données réelles des évaluations · {primaryYear}
-                                            {' '} · <Box component="span" sx={{ color: '#EF4444' }}>ligne rouge = seuil 70%</Box>
+                                            Évaluations des participants · {primaryYear}
                                         </Typography>
 
                                         {isLoadingCurrent ? (
@@ -752,14 +984,32 @@ export default function Stats() {
                                                 {isLoadingCurrent ? (
                                                     <Skeleton variant="circular" width={200} height={200} sx={{ mx: 'auto' }} />
                                                 ) : (
-                                                    <ResponsiveContainer width="100%" height={220}>
-                                                        <RadarChart data={(stats?.notesMoyennesParDomaine || [])
-                                                            .filter(d => d.note != null)
-                                                            .map(d => ({ domaine: d.domaine.substring(0, 8), note: d.note || 0 }))}>
+                                                    <ResponsiveContainer width="100%" height={240}>
+                                                        <RadarChart
+                                                            data={(stats?.notesMoyennesParDomaine || [])
+                                                                .filter(d => d.note != null)
+                                                                .map(d => ({
+                                                                    domaine: d.domaine?.length > 10 ? d.domaine.substring(0, 9) + '…' : (d.domaine || ''),
+                                                                    note: d.note || 0
+                                                                }))}
+                                                        >
                                                             <PolarGrid stroke="#E2E8F0" />
-                                                            <PolarAngleAxis dataKey="domaine" tick={{ fontSize: 10, fill: '#64748B' }} />
-                                                            <PolarRadiusAxis angle={30} domain={[0, 20]} tick={{ fontSize: 9, fill: '#94A3B8' }} tickCount={4} />
-                                                            <Radar name="Note moy." dataKey="note" stroke="#6366F1" fill="#6366F1" fillOpacity={0.18} strokeWidth={2} />
+                                                            <PolarAngleAxis dataKey="domaine" tick={{ fontSize: 9, fill: '#64748B' }} />
+                                                            <PolarRadiusAxis
+                                                                angle={30}
+                                                                domain={[0, 20]}
+                                                                tick={{ fontSize: 9, fill: '#94A3B8' }}
+                                                                tickCount={4}
+                                                            />
+                                                            <Radar
+                                                                name="Note moy."
+                                                                dataKey="note"
+                                                                stroke="#6366F1"
+                                                                fill="#6366F1"
+                                                                fillOpacity={0.18}
+                                                                strokeWidth={2}
+                                                            />
+                                                            <Tooltip content={<RadarTooltip />} />
                                                         </RadarChart>
                                                     </ResponsiveContainer>
                                                 )}
@@ -804,8 +1054,8 @@ export default function Stats() {
                     )}
 
                     {/* ══════════════════════════════════════════════════════════════
-                    TAB 3 — BUDGET & FINANCES
-                ══════════════════════════════════════════════════════════════ */}
+                        TAB 3 — BUDGET & FINANCES
+                    ══════════════════════════════════════════════════════════════ */}
                     {activeTab === 3 && (
                         <Grid container spacing={2.5}>
                             {/* KPIs budget */}
@@ -858,15 +1108,20 @@ export default function Stats() {
                                         {isLoadingCurrent ? (
                                             <Skeleton variant="rounded" width="100%" height={240} />
                                         ) : (
-                                            <ResponsiveContainer width="100%" height={240}>
-                                                <BarChart data={stats?.budgetParTrimestre || []} barSize={40}>
+                                            <ResponsiveContainer width="100%" height={260}>
+                                                <BarChart data={stats?.budgetParTrimestre || []} barSize={36}>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                                                     <XAxis dataKey="trimestre" tick={{ fontSize: 12, fill: '#475569', fontWeight: 700 }} axisLine={false} />
-                                                    <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false}
-                                                           tickFormatter={v => `${Math.round(v / 1000)}k`} />
+                                                    <YAxis
+                                                        tick={{ fontSize: 10, fill: '#94A3B8' }}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tickFormatter={v => `${Math.round(v / 1000)}k`}
+                                                    />
                                                     <Tooltip content={<CustomTooltip />} />
-                                                    <Bar dataKey="budget" name="Budget (DT)" fill="#6366F1" radius={[6, 6, 0, 0]} />
-                                                    <Bar dataKey="objectif" name="Objectif" fill="#E2E8F0" radius={[6, 6, 0, 0]} />
+                                                    <Legend wrapperStyle={{ fontSize: '0.75rem', paddingTop: 8 }} />
+                                                    <Bar dataKey="budget" name="Budget réalisé" fill="#6366F1" radius={[6, 6, 0, 0]} animationDuration={1000} />
+                                                    <Bar dataKey="objectif" name="Objectif prévu" fill="#E2E8F0" radius={[6, 6, 0, 0]} animationDuration={1000} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         )}
@@ -890,8 +1145,13 @@ export default function Stats() {
                                             <>
                                                 <ResponsiveContainer width="100%" height={180}>
                                                     <PieChart>
-                                                        <Pie data={stats?.formationsParDomaine || []} cx="50%" cy="50%"
-                                                             innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="budget" nameKey="name" stroke="none">
+                                                        <Pie
+                                                            data={stats?.formationsParDomaine || []}
+                                                            cx="50%" cy="50%"
+                                                            innerRadius={50} outerRadius={80}
+                                                            paddingAngle={3} dataKey="budget" nameKey="name"
+                                                            stroke="#fff" strokeWidth={2} cornerRadius={4}
+                                                        >
                                                             {(stats?.formationsParDomaine || []).map((_, i) => (
                                                                 <Cell key={i} fill={DOMAIN_PALETTE[i % DOMAIN_PALETTE.length]} />
                                                             ))}
@@ -921,16 +1181,16 @@ export default function Stats() {
                     )}
 
                     {/* ══════════════════════════════════════════════════════════════
-                    TAB 4 — FORMATEURS
-                ══════════════════════════════════════════════════════════════ */}
+                        TAB 4 — FORMATEURS
+                    ══════════════════════════════════════════════════════════════ */}
                     {activeTab === 4 && (
                         <Grid container spacing={2.5}>
-                            {/* Performance des formateurs (Chart) */}
+                            {/* Performance des formateurs */}
                             <Grid item xs={12} lg={8}>
                                 <Card sx={{ border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: 'none', height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                            <RecordVoiceOver sx={{ color: '#6366F1', fontSize: 22 }} />
+                                            <Groups sx={{ color: '#6366F1', fontSize: 22 }} />
                                             <Box>
                                                 <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>
                                                     Analyse des Performances (Top Formateurs) — {primaryYear}
@@ -943,22 +1203,24 @@ export default function Stats() {
 
                                         {isLoadingCurrent ? (
                                             <Skeleton variant="rounded" width="100%" height={300} />
-                                        ) : (stats?.topFormateurs?.length > 0) ? (
-                                            <ResponsiveContainer width="100%" height={300}>
-                                                <ComposedChart data={stats.topFormateurs.map(f => ({
-                                                    name: `${f.prenom} ${f.nom?.substring(0,1) || ''}.`,
-                                                    formations: f.nbFormations || 0,
-                                                    note: f.noteMoyenne || 0
-                                                }))} margin={{ top: 20, right: 20, bottom: 0, left: -10 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                                                    <YAxis yAxisId="l" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                                                    <YAxis yAxisId="r" orientation="right" domain={[10, 20]} tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                                                    <Tooltip content={<CustomTooltip />} />
-                                                    <Bar yAxisId="l" dataKey="formations" name="Sessions animées" barSize={30} fill="#6366F1" radius={[6, 6, 0, 0]} />
-                                                    <Line yAxisId="r" type="monotone" dataKey="note" name="Note Moyenne" stroke="#F59E0B" strokeWidth={3} dot={{ fill: '#F59E0B', r: 6, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8 }} />
-                                                </ComposedChart>
-                                            </ResponsiveContainer>
+                                        ) : (topFormateursData.length > 0) ? (
+                                            <CustomBarLineChart
+                                                chartId={`formateurs-${primaryYear}`}
+                                                data={topFormateursData}
+                                                barKey="formations"
+                                                lineKey="note"
+                                                nameKey="name"
+                                                barColors={['#6366F1']}
+                                                lineColor="#F59E0B"
+                                                barName="Sessions animées"
+                                                lineName="Note /20"
+                                                height={300}
+                                                barSize={40}
+                                                rightDomain={[10, 20]}
+                                                tooltipFormatter={(val, key) =>
+                                                    key === 'note' ? `${Number(val).toFixed(1)}/20` : val
+                                                }
+                                            />
                                         ) : (
                                             <Box sx={{ textAlign: 'center', py: 5, color: '#94A3B8' }}>
                                                 Aucune donnée de formateurs pour {primaryYear}
@@ -1001,8 +1263,10 @@ export default function Stats() {
                                                                     { name: 'Internes', value: stats?.formateursInternes || 0 },
                                                                     { name: 'Externes', value: stats?.formateursExternes || 0 },
                                                                 ]}
-                                                                cx="50%" cy="50%" innerRadius={45} outerRadius={70}
-                                                                paddingAngle={3} dataKey="value" stroke="none"
+                                                                cx="50%" cy="50%"
+                                                                innerRadius={45} outerRadius={70}
+                                                                paddingAngle={3} dataKey="value"
+                                                                stroke="#fff" strokeWidth={2} cornerRadius={4}
                                                             >
                                                                 <Cell fill="#10B981" />
                                                                 <Cell fill="#8B5CF6" />
@@ -1020,8 +1284,8 @@ export default function Stats() {
                     )}
 
                     {/* ══════════════════════════════════════════════════════════════
-                    TAB 5 — COMPARATIF ANNUEL (toutes les années, vraies données)
-                ══════════════════════════════════════════════════════════════ */}
+                        TAB 5 — COMPARATIF ANNUEL
+                    ══════════════════════════════════════════════════════════════ */}
                     {activeTab === 5 && (
                         <Grid container spacing={2.5}>
                             {/* Tendance pluriannuelle */}
@@ -1055,25 +1319,44 @@ export default function Stats() {
                                         </Box>
 
                                         <ResponsiveContainer width="100%" height={260}>
-                                            <ComposedChart data={annualTrend} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                                            <BarChart data={annualTrend} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                                                 <defs>
-                                                    <linearGradient id="annGrad2" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#6366F1" stopOpacity={0.2} />
-                                                        <stop offset="95%" stopColor="#6366F1" stopOpacity={0.01} />
+                                                    <linearGradient id={`annGrad-${chartMetric}`} x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor={METRIC_COLORS[chartMetric] || '#6366F1'} stopOpacity={0.25} />
+                                                        <stop offset="95%" stopColor={METRIC_COLORS[chartMetric] || '#6366F1'} stopOpacity={0.02} />
                                                     </linearGradient>
                                                 </defs>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
                                                 <XAxis dataKey="year" tick={{ fontSize: 12, fill: '#475569', fontWeight: 700 }} axisLine={false} />
-                                                <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false}
-                                                       tickFormatter={chartMetric === 'budget' ? v => `${Math.round(v / 1000)}k` : chartMetric === 'tauxPresence' ? v => `${v}%` : undefined} />
-                                                <Tooltip content={<CustomTooltip />} />
-                                                <Area type="monotone" dataKey={chartMetric}
-                                                      name={chartMetric === 'formations' ? 'Formations' : chartMetric === 'participants' ? 'Participants' : chartMetric === 'budget' ? 'Budget (DT)' : 'Taux présence (%)'}
-                                                      stroke="#6366F1" fill="url(#annGrad2)" strokeWidth={3}
-                                                      dot={{ fill: '#6366F1', r: 7, strokeWidth: 2, stroke: '#fff' }}
-                                                      activeDot={{ r: 9 }}
+                                                <YAxis
+                                                    tick={{ fontSize: 10, fill: '#94A3B8' }}
+                                                    axisLine={false}
+                                                    tickFormatter={
+                                                        chartMetric === 'budget'
+                                                            ? v => `${Math.round(v / 1000)}k`
+                                                            : chartMetric === 'tauxPresence'
+                                                                ? v => `${v}%`
+                                                                : undefined
+                                                    }
                                                 />
-                                            </ComposedChart>
+                                                <Tooltip content={<CustomTooltip />} />
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey={chartMetric}
+                                                    name={
+                                                        chartMetric === 'formations' ? 'Formations'
+                                                            : chartMetric === 'participants' ? 'Participants'
+                                                                : chartMetric === 'budget' ? 'Budget (DT)'
+                                                                    : 'Taux présence (%)'
+                                                    }
+                                                    stroke={METRIC_COLORS[chartMetric] || '#6366F1'}
+                                                    fill={`url(#annGrad-${chartMetric})`}
+                                                    strokeWidth={3}
+                                                    dot={{ fill: '#fff', r: 6, strokeWidth: 2.5, stroke: METRIC_COLORS[chartMetric] || '#6366F1' }}
+                                                    activeDot={{ r: 8, strokeWidth: 0, fill: METRIC_COLORS[chartMetric] || '#6366F1' }}
+                                                    animationDuration={1200}
+                                                />
+                                            </BarChart>
                                         </ResponsiveContainer>
                                     </CardContent>
                                 </Card>

@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box, TextField, Button, Typography, Paper, IconButton,
-    InputAdornment, Avatar, Chip, Alert, Snackbar, LinearProgress,
-    Divider, CircularProgress,
+    InputAdornment, Avatar, Chip, Alert, Snackbar,
+    Divider, CircularProgress, Tooltip,
 } from '@mui/material';
 import {
     ArrowBack, Visibility, VisibilityOff, Lock,
     Person, Email, Shield, Save, CameraAlt, CheckCircle,
+    DeleteOutline,
 } from '@mui/icons-material';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
@@ -44,7 +45,7 @@ function PasswordStrength({ password }) {
 
 export default function Profile() {
     const navigate = useNavigate();
-    const { user, clearFirstLogin } = useAuthStore();
+    const { user } = useAuthStore();
     const fileInputRef = useRef(null);
 
     const [showPwd, setShowPwd] = useState({ current: false, newPwd: false, confirm: false });
@@ -77,6 +78,13 @@ export default function Profile() {
             setSnack({ open: true, msg: 'Photo mise a jour', severity: 'success' });
         };
         reader.readAsDataURL(file);
+    };
+
+    const handlePhotoDelete = () => {
+        setPhoto(null);
+        localStorage.removeItem('profilePhoto_' + user?.id);
+        setSnack({ open: true, msg: 'Photo de profil supprimee', severity: 'success' });
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const validate = () => {
@@ -173,20 +181,44 @@ export default function Profile() {
                                             : (user?.login || 'U').charAt(0).toUpperCase()
                                         }
                                     </Avatar>
-                                    <Box
-                                        onClick={() => fileInputRef.current?.click()}
-                                        sx={{
-                                            position: 'absolute', bottom: -2, right: -2,
-                                            width: 30, height: 30, borderRadius: '50%',
-                                            bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                            border: '2px solid #6366F1',
-                                            transition: 'transform 0.2s',
-                                            '&:hover': { transform: 'scale(1.1)' },
-                                        }}
-                                    >
-                                        {photoLoading ? <CircularProgress size={14} sx={{ color: '#6366F1' }} /> : <CameraAlt sx={{ fontSize: 14, color: '#6366F1' }} />}
-                                    </Box>
+
+                                    {/* Bouton changer photo */}
+                                    <Tooltip title="Changer la photo">
+                                        <Box
+                                            onClick={() => fileInputRef.current?.click()}
+                                            sx={{
+                                                position: 'absolute', bottom: -2, right: -2,
+                                                width: 30, height: 30, borderRadius: '50%',
+                                                bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                border: '2px solid #6366F1',
+                                                transition: 'transform 0.2s',
+                                                '&:hover': { transform: 'scale(1.1)' },
+                                            }}
+                                        >
+                                            {photoLoading ? <CircularProgress size={14} sx={{ color: '#6366F1' }} /> : <CameraAlt sx={{ fontSize: 14, color: '#6366F1' }} />}
+                                        </Box>
+                                    </Tooltip>
+
+                                    {/* Bouton supprimer photo */}
+                                    {photo && (
+                                        <Tooltip title="Supprimer la photo">
+                                            <Box
+                                                onClick={handlePhotoDelete}
+                                                sx={{
+                                                    position: 'absolute', bottom: -2, left: -2,
+                                                    width: 30, height: 30, borderRadius: '50%',
+                                                    bgcolor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                    border: '2px solid #EF4444',
+                                                    transition: 'transform 0.2s',
+                                                    '&:hover': { transform: 'scale(1.1)', bgcolor: '#FEF2F2' },
+                                                }}
+                                            >
+                                                <DeleteOutline sx={{ fontSize: 14, color: '#EF4444' }} />
+                                            </Box>
+                                        </Tooltip>
+                                    )}
                                 </Box>
                                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} style={{ display: 'none' }} />
 
@@ -223,11 +255,6 @@ export default function Profile() {
                                         </Box>
                                     </Box>
                                 ))}
-                                <Box sx={{ mt: 2, p: 2, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px solid #E2E8F0' }}>
-                                    <Typography sx={{ fontSize: '0.72rem', color: '#64748B', lineHeight: 1.6 }}>
-                                        Cliquez sur l'icone photo pour modifier votre avatar. Format JPG/PNG, max 2 Mo.
-                                    </Typography>
-                                </Box>
                             </Box>
                         </Paper>
                     </Box>
@@ -247,7 +274,6 @@ export default function Profile() {
 
                             <Box sx={{ p: 3 }}>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                                    {/* Mot de passe actuel */}
                                     <Box>
                                         <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', mb: 1 }}>
                                             Mot de passe actuel <span style={{ color: '#EF4444' }}>*</span>
@@ -276,7 +302,6 @@ export default function Profile() {
 
                                     <Divider sx={{ borderColor: '#F1F5F9' }} />
 
-                                    {/* Nouveau mot de passe */}
                                     <Box>
                                         <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', mb: 1 }}>
                                             Nouveau mot de passe <span style={{ color: '#EF4444' }}>*</span>
@@ -304,7 +329,6 @@ export default function Profile() {
                                         <PasswordStrength password={form.newPassword} />
                                     </Box>
 
-                                    {/* Confirmation */}
                                     <Box>
                                         <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', mb: 1 }}>
                                             Confirmer le nouveau mot de passe <span style={{ color: '#EF4444' }}>*</span>
@@ -340,22 +364,6 @@ export default function Profile() {
                                         )}
                                     </Box>
 
-                                    {/* Regles */}
-                                    <Box sx={{ p: 2.5, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px solid #E2E8F0' }}>
-                                        <Typography sx={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600, mb: 1 }}>Regles du mot de passe :</Typography>
-                                        {[
-                                            { label: 'Minimum 8 caracteres', ok: form.newPassword.length >= 8 },
-                                            { label: 'Au moins une majuscule', ok: /[A-Z]/.test(form.newPassword) },
-                                            { label: 'Au moins un chiffre', ok: /[0-9]/.test(form.newPassword) },
-                                            { label: 'Au moins un caractere special', ok: /[^A-Za-z0-9]/.test(form.newPassword) },
-                                        ].map((rule, i) => (
-                                            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.4 }}>
-                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: rule.ok ? '#10B981' : '#CBD5E1', flexShrink: 0 }} />
-                                                <Typography sx={{ fontSize: '0.75rem', color: rule.ok ? '#059669' : '#94A3B8' }}>{rule.label}</Typography>
-                                            </Box>
-                                        ))}
-                                    </Box>
-
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
                                         <Button
                                             onClick={handleSubmit}
@@ -376,14 +384,6 @@ export default function Profile() {
                                     </Box>
                                 </Box>
                             </Box>
-                        </Paper>
-
-                        {/* Info securite */}
-                        <Paper elevation={0} sx={{ mt: 2.5, borderRadius: 3, border: '1px solid #FEF3C7', bgcolor: '#FFFBEB', p: 2.5 }}>
-                            <Typography sx={{ fontSize: '0.8rem', color: '#92400E', fontWeight: 600, mb: 0.5 }}>Securite du compte</Typography>
-                            <Typography sx={{ fontSize: '0.78rem', color: '#B45309', lineHeight: 1.6 }}>
-                                Apres modification de votre mot de passe, vous serez automatiquement deconnecte et redirige vers la page de connexion. Veillez a memoriser votre nouveau mot de passe.
-                            </Typography>
                         </Paper>
                     </Box>
                 </Box>

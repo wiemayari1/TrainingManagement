@@ -10,29 +10,16 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 /* ─── Icônes inline ─── */
 const UserLabelIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
         <circle cx="12" cy="7" r="4"/>
     </svg>
 );
 
 const LockLabelIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </svg>
-);
-
-const GraduationCapIcon = () => (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#gradCapGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <defs>
-            <linearGradient id="gradCapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#6366F1" />
-                <stop offset="100%" stopColor="#A855F7" />
-            </linearGradient>
-        </defs>
-        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-        <path d="M6 12v5c0 1.5 2.5 3 6 3s6-1.5 6-3v-5"/>
     </svg>
 );
 
@@ -212,7 +199,7 @@ export default function Login() {
                 variants={cardVariants}
                 initial="hidden"
                 animate="visible"
-                style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 960 }}
+                style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 840 }}
             >
                 <Paper elevation={0} sx={{
                     borderRadius: '24px',
@@ -222,7 +209,7 @@ export default function Login() {
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: { xs: 'column', md: 'row' },
-                    minHeight: 620,
+                    minHeight: 500,
                 }}>
                     {/* Ligne dégradée supérieure */}
                     <Box sx={{
@@ -235,13 +222,13 @@ export default function Login() {
 
                     {/* ═════ COLONNE GAUCHE ═════ */}
                     <Box sx={{
-                        width: { xs: '100%', md: '42%' },
+                        width: { xs: '100%', md: '45%' },
                         bgcolor: '#F5F3FF',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        p: { xs: 4, md: 5 },
+                        p: { xs: 3, md: 4 },
                         position: 'relative',
                         overflow: 'hidden',
                     }}>
@@ -266,54 +253,7 @@ export default function Login() {
                             animate="visible"
                             style={{ width: '100%', textAlign: 'center', position: 'relative', zIndex: 1 }}
                         >
-                            <motion.div variants={itemVariants}>
-                                <Box sx={{
-                                    width: 64, height: 64,
-                                    mx: 'auto', mb: 2.5,
-                                    borderRadius: '50%',
-                                    bgcolor: '#ffffff',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    boxShadow: '0 4px 20px rgba(99,102,241,0.12)',
-                                }}>
-                                    <GraduationCapIcon />
-                                </Box>
-                            </motion.div>
-
-                            <motion.div variants={itemVariants}>
-                                <Typography sx={{
-                                    fontWeight: 800,
-                                    color: '#0F172A',
-                                    fontSize: '1.6rem',
-                                    letterSpacing: '-0.02em',
-                                    mb: 0.5,
-                                }}>
-                                    Excellent Training
-                                </Typography>
-                            </motion.div>
-
-                            <motion.div variants={itemVariants}>
-                                <Typography sx={{
-                                    color: '#64748B',
-                                    fontSize: '0.9rem',
-                                    mb: 2.5,
-                                }}>
-                                    Centre de Formation Professionnelle
-                                </Typography>
-                            </motion.div>
-
-                            <motion.div variants={itemVariants}>
-                                <Box sx={{
-                                    width: 36, height: 3,
-                                    bgcolor: '#C4B5FD',
-                                    borderRadius: 2,
-                                    mx: 'auto',
-                                    mb: 4,
-                                }} />
-                            </motion.div>
-
-                            {/* ─── IMAGE AGRANDIE ─── */}
+                            {/* ─── LOGO ─── */}
                             <motion.div variants={itemVariants}>
                                 <Box sx={{
                                     mb: 4,
@@ -322,35 +262,46 @@ export default function Login() {
                                     alignItems: 'center',
                                 }}>
                                     <img
-                                        src="/assests/book.png"
-                                        alt="Livres"
+                                        src="/assets/logo.png"
+                                        alt="Logo Excellent Training"
                                         style={{
-                                            maxWidth: '280px',
+                                            maxWidth: '220px',
                                             width: '100%',
                                             height: 'auto',
                                             objectFit: 'contain',
+                                            filter: 'drop-shadow(0 8px 16px rgba(99,102,241,0.2))',
                                         }}
                                     />
                                 </Box>
                             </motion.div>
 
                             <motion.div variants={itemVariants}>
+                                <Box sx={{
+                                    width: 32, height: 3,
+                                    bgcolor: '#C4B5FD',
+                                    borderRadius: 2,
+                                    mx: 'auto',
+                                    mb: 3,
+                                }} />
+                            </motion.div>
+
+                            <motion.div variants={itemVariants}>
                                 <Typography sx={{
                                     color: '#475569',
-                                    fontSize: '0.95rem',
+                                    fontSize: '0.9rem',
                                     fontStyle: 'italic',
                                     maxWidth: 240,
                                     mx: 'auto',
-                                    lineHeight: 1.6,
-                                    mb: 3,
+                                    lineHeight: 1.5,
+                                    mb: 2,
                                 }}>
-                                    « Développez vos compétences, construisez votre avenir. »
+                                    « Développez vos compétences,<br />construisez votre avenir. »
                                 </Typography>
                             </motion.div>
 
                             <motion.div variants={itemVariants}>
                                 <Box sx={{
-                                    width: 36, height: 3,
+                                    width: 32, height: 3,
                                     bgcolor: '#C4B5FD',
                                     borderRadius: 2,
                                     mx: 'auto',
@@ -361,27 +312,27 @@ export default function Login() {
 
                     {/* ═════ COLONNE DROITE ═════ */}
                     <Box sx={{
-                        width: { xs: '100%', md: '58%' },
+                        width: { xs: '100%', md: '55%' },
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'center',
-                        p: { xs: 4, md: 7 },
+                        p: { xs: 3, md: 5 },
                     }}>
                         <motion.div
                             variants={containerVariants}
                             initial="hidden"
                             animate="visible"
                         >
-                            <motion.div variants={itemVariants} style={{ textAlign: 'center', marginBottom: 36 }}>
+                            <motion.div variants={itemVariants} style={{ textAlign: 'center', marginBottom: 28 }}>
                                 <Typography sx={{
                                     fontWeight: 700,
                                     color: '#0F172A',
-                                    fontSize: '1.85rem',
+                                    fontSize: '1.7rem',
                                     mb: 0.5,
                                 }}>
                                     Bienvenue !
                                 </Typography>
-                                <Typography sx={{ color: '#64748B', fontSize: '0.95rem' }}>
+                                <Typography sx={{ color: '#64748B', fontSize: '0.9rem' }}>
                                     Connectez-vous à votre espace
                                 </Typography>
                             </motion.div>
@@ -389,12 +340,13 @@ export default function Login() {
                             {error && (
                                 <motion.div variants={itemVariants}>
                                     <Alert severity="error" sx={{
-                                        mb: 3,
+                                        mb: 2.5,
                                         borderRadius: 2,
                                         bgcolor: '#FEF2F2',
                                         color: '#991B1B',
                                         border: '1px solid #FECACA',
                                         fontSize: '0.875rem',
+                                        py: 0.5,
                                     }}>
                                         {error}
                                     </Alert>
@@ -403,29 +355,25 @@ export default function Login() {
 
                             <form onSubmit={handleSubmit}>
                                 <motion.div variants={itemVariants}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                        <UserLabelIcon />
-                                        <Typography sx={{
-                                            color: '#374151',
-                                            fontWeight: 500,
-                                            fontSize: '0.9rem',
-                                        }}>
-                                            Nom d'utilisateur
-                                        </Typography>
-                                    </Box>
                                     <TextField
                                         fullWidth
+                                        label="Nom d'utilisateur"
                                         value={form.login}
                                         onChange={e => setForm({ ...form, login: e.target.value })}
                                         placeholder="Entrez votre nom d'utilisateur"
                                         variant="outlined"
-                                        sx={{ mb: 3 }}
+                                        sx={{ mb: 2.5 }}
                                         InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <UserLabelIcon />
+                                                </InputAdornment>
+                                            ),
                                             sx: {
                                                 borderRadius: '12px',
                                                 bgcolor: '#F9FAFB',
                                                 fontSize: '0.95rem',
-                                                py: 0.3,
+                                                py: 0.1,
                                                 '& fieldset': {
                                                     borderColor: '#E5E7EB',
                                                     borderWidth: '1.5px',
@@ -442,18 +390,9 @@ export default function Login() {
                                 </motion.div>
 
                                 <motion.div variants={itemVariants}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                        <LockLabelIcon />
-                                        <Typography sx={{
-                                            color: '#374151',
-                                            fontWeight: 500,
-                                            fontSize: '0.9rem',
-                                        }}>
-                                            Mot de passe
-                                        </Typography>
-                                    </Box>
                                     <TextField
                                         fullWidth
+                                        label="Mot de passe"
                                         type={showPwd ? 'text' : 'password'}
                                         value={form.password}
                                         onChange={e => setForm({ ...form, password: e.target.value })}
@@ -461,6 +400,11 @@ export default function Login() {
                                         variant="outlined"
                                         sx={{ mb: 1.5 }}
                                         InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <LockLabelIcon />
+                                                </InputAdornment>
+                                            ),
                                             endAdornment: (
                                                 <InputAdornment position="end">
                                                     <IconButton
@@ -476,7 +420,7 @@ export default function Login() {
                                                 borderRadius: '12px',
                                                 bgcolor: '#F9FAFB',
                                                 fontSize: '0.95rem',
-                                                py: 0.3,
+                                                py: 0.1,
                                                 '& fieldset': {
                                                     borderColor: '#E5E7EB',
                                                     borderWidth: '1.5px',
@@ -492,12 +436,12 @@ export default function Login() {
                                     />
                                 </motion.div>
 
-                                <motion.div variants={itemVariants} style={{ textAlign: 'right', marginBottom: 28 }}>
+                                <motion.div variants={itemVariants} style={{ textAlign: 'right', marginBottom: 24 }}>
                                     <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
                                         <Typography sx={{
                                             color: '#6366F1',
                                             fontWeight: 600,
-                                            fontSize: '0.9rem',
+                                            fontSize: '0.85rem',
                                             '&:hover': { color: '#4F46E5' },
                                         }}>
                                             Mot de passe oublié ?
@@ -512,11 +456,11 @@ export default function Login() {
                                         variant="contained"
                                         disabled={loading}
                                         sx={{
-                                            py: 1.6,
+                                            py: 1.4,
                                             borderRadius: '12px',
                                             textTransform: 'none',
                                             fontWeight: 700,
-                                            fontSize: '1.05rem',
+                                            fontSize: '1rem',
                                             background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A855F7 100%)',
                                             '&:hover': {
                                                 background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #9333EA 100%)',
@@ -535,9 +479,9 @@ export default function Login() {
                                 <Typography sx={{
                                     display: 'block',
                                     textAlign: 'center',
-                                    mt: 5,
+                                    mt: 4,
                                     color: '#94A3B8',
-                                    fontSize: '0.8rem',
+                                    fontSize: '0.75rem',
                                 }}>
                                     © 2026 Excellent Training — Green Building
                                 </Typography>

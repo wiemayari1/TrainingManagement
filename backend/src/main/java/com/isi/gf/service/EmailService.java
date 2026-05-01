@@ -1,5 +1,6 @@
 package com.isi.gf.service;
 
+import com.isi.gf.dto.FormationDTO;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
@@ -62,6 +63,28 @@ public class EmailService {
         log.info("Email de bienvenue envoyé à {}", maskEmail(to));
     }
 
+    /**
+     * Envoie un email de notification : formation qui commence aujourd'hui.
+     */
+    public void sendFormationStartingTodayEmail(String toEmail, FormationDTO formation, String message)
+            throws MessagingException {
+        String subject = "Formation qui commence aujourd'hui : " + (formation.getTitre() != null ? formation.getTitre() : "");
+        String html = buildFormationStartingEmail(formation, message);
+        sendEmail(toEmail, subject, html);
+        log.info("Email 'formation aujourd'hui' envoyé à {}", maskEmail(toEmail));
+    }
+
+    /**
+     * Envoie un email de notification : affectation à une formation.
+     */
+    public void sendFormationAssignmentEmail(String toEmail, String participantName, FormationDTO formation)
+            throws MessagingException {
+        String subject = "Affectation à une formation : " + (formation.getTitre() != null ? formation.getTitre() : "");
+        String html = buildFormationAssignmentEmail(participantName, formation);
+        sendEmail(toEmail, subject, html);
+        log.info("Email 'affectation formation' envoyé à {}", maskEmail(toEmail));
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Méthode d'envoi commune
     // ─────────────────────────────────────────────────────────────────────────
@@ -93,7 +116,24 @@ public class EmailService {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Builders HTML
+    // Logo PNG (doit être dans frontend/public/assets/logo.png)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Bloc logo : image PNG hébergée sur le frontend.
+     * Le fichier logo.png doit être dans le dossier frontend/public/assets/
+     */
+    private String logoBlock() {
+        String logoUrl = frontendUrl + "/assets/logo.png";
+        return """
+            <img src="%s" width="48" height="48"
+                 style="display:block;margin:0 auto;border:0;"
+                 alt="Excellent Training">
+            """.formatted(logoUrl);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Builders HTML — Authentification
     // ─────────────────────────────────────────────────────────────────────────
 
     private String buildResetEmail(String resetLink) {
@@ -116,9 +156,8 @@ public class EmailService {
                       <td style="background:linear-gradient(135deg,#312E81,#4C1D95);
                                  padding:36px 40px;text-align:center;">
                         <div style="display:inline-block;background:rgba(255,255,255,0.15);
-                                    border-radius:12px;padding:12px 20px;margin-bottom:16px;">
-                          <span style="font-size:26px;font-weight:800;color:#ffffff;
-                                       letter-spacing:-0.5px;">ET</span>
+                                    border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+                          %s
                         </div>
                         <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">
                           Excellent Training
@@ -187,7 +226,7 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(resetLink, resetLink);
+            """.formatted(logoBlock(), resetLink, resetLink);
     }
 
     private String buildWelcomeEmail(String username, String role, String password) {
@@ -217,8 +256,8 @@ public class EmailService {
                       <td style="background:linear-gradient(135deg,#047857,#065F46);
                                  padding:36px 40px;text-align:center;">
                         <div style="display:inline-block;background:rgba(255,255,255,0.15);
-                                    border-radius:12px;padding:12px 20px;margin-bottom:16px;">
-                          <span style="font-size:26px;font-weight:800;color:#ffffff;">ET</span>
+                                    border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+                          %s
                         </div>
                         <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">
                           Excellent Training
@@ -321,11 +360,340 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(username, roleLabel, username, password, loginUrl);
+            """.formatted(logoBlock(), username, roleLabel, username, password, loginUrl);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Utilitaire
+    // Builders HTML — Formations
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private String buildFormationStartingEmail(FormationDTO formation, String message) {
+        String dashboardUrl = frontendUrl + "/dashboard/formations";
+
+        return """
+            <!DOCTYPE html>
+            <html lang="fr">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin:0;padding:0;background-color:#F8FAFC;font-family:'Segoe UI',Arial,sans-serif;">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:40px 0;">
+                <tr><td align="center">
+                  <table width="600" cellpadding="0" cellspacing="0"
+                         style="background:#ffffff;border-radius:12px;overflow:hidden;
+                                box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:600px;width:100%%;">
+
+                    <!-- En-tête orange (urgence) -->
+                    <tr>
+                      <td style="background:linear-gradient(135deg,#D97706,#B45309);
+                                 padding:36px 40px;text-align:center;">
+                        <div style="display:inline-block;background:rgba(255,255,255,0.15);
+                                    border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+                          %s
+                        </div>
+                        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">
+                          Excellent Training
+                        </h1>
+                        <p style="margin:6px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">
+                          Centre de Formation Professionnelle
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Corps -->
+                    <tr>
+                      <td style="padding:40px;">
+                        <div style="margin-bottom:24px;">
+                          <span style="display:inline-block;background:#FEF3C7;color:#92400E;
+                                       font-size:12px;font-weight:700;padding:4px 12px;
+                                       border-radius:20px;letter-spacing:0.3px;">
+                            📅 Aujourd'hui
+                          </span>
+                        </div>
+
+                        <h2 style="margin:0 0 16px;color:#0F172A;font-size:20px;font-weight:700;">
+                          Une formation commence aujourd'hui
+                        </h2>
+
+                        <!-- Bloc infos formation -->
+                        <div style="background:#F8FAFC;border:1px solid #E2E8F0;
+                                    border-radius:10px;padding:24px;margin-bottom:28px;">
+                          <table width="100%%" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Titre
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:700;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Date de début
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Durée
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s jour(s)
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Lieu
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Domaine
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                          </table>
+                        </div>
+
+                        <!-- Message personnalisé -->
+                        <div style="background:#FFFBEB;border-left:4px solid #F59E0B;
+                                    border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:28px;">
+                          <p style="margin:0;color:#78350F;font-size:14px;line-height:1.6;">
+                            %s
+                          </p>
+                        </div>
+
+                        <!-- Bouton CTA -->
+                        <div style="text-align:center;margin:28px 0;">
+                          <a href="%s"
+                             style="display:inline-block;padding:14px 36px;
+                                    background:linear-gradient(135deg,#F59E0B,#D97706);
+                                    color:#ffffff;text-decoration:none;border-radius:8px;
+                                    font-size:15px;font-weight:600;">
+                            Consulter sur la plateforme
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <!-- Pied de page -->
+                    <tr>
+                      <td style="background:#F8FAFC;padding:20px 40px;text-align:center;
+                                 border-top:1px solid #E2E8F0;">
+                        <p style="margin:0;color:#94A3B8;font-size:12px;">
+                          © 2026 Excellent Training — Green Building · Tous droits réservés
+                        </p>
+                      </td>
+                    </tr>
+
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(
+                logoBlock(),
+                formation.getTitre() == null ? "Non renseignée" : escapeHtml(formation.getTitre()),
+                formation.getDateDebut() == null ? "Non renseignée" : formation.getDateDebut(),
+                formation.getDuree() == null ? "Non renseignée" : formation.getDuree(),
+                formation.getLieu() == null ? "Non renseigné" : escapeHtml(formation.getLieu()),
+                formation.getDomaineLibelle() == null ? "Non renseigné" : escapeHtml(formation.getDomaineLibelle()),
+                message == null ? "" : escapeHtml(message),
+                dashboardUrl
+        );
+    }
+
+    private String buildFormationAssignmentEmail(String participantName, FormationDTO formation) {
+        String dashboardUrl = frontendUrl + "/dashboard/formations";
+
+        return """
+            <!DOCTYPE html>
+            <html lang="fr">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin:0;padding:0;background-color:#F8FAFC;font-family:'Segoe UI',Arial,sans-serif;">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:40px 0;">
+                <tr><td align="center">
+                  <table width="600" cellpadding="0" cellspacing="0"
+                         style="background:#ffffff;border-radius:12px;overflow:hidden;
+                                box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:600px;width:100%%;">
+
+                    <!-- En-tête indigo -->
+                    <tr>
+                      <td style="background:linear-gradient(135deg,#312E81,#4C1D95);
+                                 padding:36px 40px;text-align:center;">
+                        <div style="display:inline-block;background:rgba(255,255,255,0.15);
+                                    border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+                          %s
+                        </div>
+                        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">
+                          Excellent Training
+                        </h1>
+                        <p style="margin:6px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">
+                          Centre de Formation Professionnelle
+                        </p>
+                      </td>
+                    </tr>
+
+                    <!-- Corps -->
+                    <tr>
+                      <td style="padding:40px;">
+                        <div style="margin-bottom:24px;">
+                          <span style="display:inline-block;background:#EEF2FF;color:#4338CA;
+                                       font-size:12px;font-weight:700;padding:4px 12px;
+                                       border-radius:20px;letter-spacing:0.3px;">
+                            🎓 Nouvelle affectation
+                          </span>
+                        </div>
+
+                        <h2 style="margin:0 0 16px;color:#0F172A;font-size:20px;font-weight:700;">
+                          Bonjour %s,
+                        </h2>
+                        <p style="margin:0 0 24px;color:#475569;font-size:15px;line-height:1.6;">
+                          Vous avez été affecté(e) à une nouvelle formation. Voici les détails :
+                        </p>
+
+                        <!-- Bloc infos formation -->
+                        <div style="background:#F8FAFC;border:1px solid #E2E8F0;
+                                    border-radius:10px;padding:24px;margin-bottom:28px;">
+                          <table width="100%%" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Titre
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:700;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Date de début
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Durée
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s jour(s)
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Lieu
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Domaine
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:10px 0;">
+                                <span style="color:#64748B;font-size:13px;font-weight:600;
+                                             text-transform:uppercase;letter-spacing:0.5px;">
+                                  Formateur
+                                </span><br>
+                                <span style="color:#0F172A;font-size:15px;font-weight:600;">
+                                  %s
+                                </span>
+                              </td>
+                            </tr>
+                          </table>
+                        </div>
+
+                        <!-- Bouton CTA -->
+                        <div style="text-align:center;margin:28px 0;">
+                          <a href="%s"
+                             style="display:inline-block;padding:14px 36px;
+                                    background:linear-gradient(135deg,#6366F1,#8B5CF6);
+                                    color:#ffffff;text-decoration:none;border-radius:8px;
+                                    font-size:15px;font-weight:600;">
+                            Voir ma formation
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <!-- Pied de page -->
+                    <tr>
+                      <td style="background:#F8FAFC;padding:20px 40px;text-align:center;
+                                 border-top:1px solid #E2E8F0;">
+                        <p style="margin:0;color:#94A3B8;font-size:12px;">
+                          © 2026 Excellent Training — Green Building · Tous droits réservés
+                        </p>
+                      </td>
+                    </tr>
+
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(
+                logoBlock(),
+                participantName == null || participantName.isBlank() ? "Participant" : escapeHtml(participantName),
+                formation.getTitre() == null ? "Non renseignée" : escapeHtml(formation.getTitre()),
+                formation.getDateDebut() == null ? "Non renseignée" : formation.getDateDebut(),
+                formation.getDuree() == null ? "Non renseignée" : formation.getDuree(),
+                formation.getLieu() == null ? "Non renseigné" : escapeHtml(formation.getLieu()),
+                formation.getDomaineLibelle() == null ? "Non renseigné" : escapeHtml(formation.getDomaineLibelle()),
+                formation.getFormateurNom() == null ? "Non renseigné" : escapeHtml(formation.getFormateurNom()),
+                dashboardUrl
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Utilitaires
     // ─────────────────────────────────────────────────────────────────────────
 
     /** Masque l'email dans les logs : john.doe@gmail.com → jo****@gmail.com */
@@ -336,5 +704,15 @@ public class EmailService {
         String domain = parts[1];
         if (local.length() <= 2) return "**@" + domain;
         return local.substring(0, 2) + "****@" + domain;
+    }
+
+    /** Échappe les caractères HTML pour éviter les injections XSS dans les emails. */
+    private String escapeHtml(String input) {
+        if (input == null) return "";
+        return input
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 }

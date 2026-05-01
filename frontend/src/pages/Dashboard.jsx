@@ -2,629 +2,370 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import {
-    Box, Grid, Paper, Typography, Chip, Skeleton,
-    Button, Stack, LinearProgress, Divider,
+    Box, Grid, Typography, Card, CardContent,
+    Button, Avatar, Chip, LinearProgress,
 } from '@mui/material';
 import {
-    School, People, Person, TrendingUp, ArrowForward,
-    CalendarToday, Add, CheckCircle, Schedule, Block,
-    BarChart, PieChart, ShowChart, AutoGraph,
-    Adjust, EmojiEvents, ChevronRight, Assessment,
+    ArrowForward, Assessment, CalendarToday, Add,
+    CheckCircle, Schedule, Block, TrendingUp,
+    AdminPanelSettings, Badge, EmojiEvents,
+    School, People, Person,
 } from '@mui/icons-material';
-import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-    ResponsiveContainer, PieChart as RePieChart, Pie, Cell,
-} from 'recharts';
 import { motion } from 'framer-motion';
-import { statsService, formationService } from '../services/api';
+import { formationService, participantService, formateurService } from '../services/api';
 
-const COLORS = ['#4F46E5', '#7C3AED', '#DB2777', '#059669', '#D97706', '#0891B2'];
-
+/* ─── Statut config ─────────────────────────────────────────────── */
 const STATUT_CONFIG = {
-    TERMINEE: { label: 'Terminée', color: '#059669', bg: '#ECFDF5', icon: CheckCircle },
-    EN_COURS: { label: 'En cours', color: '#D97706', bg: '#FFFBEB', icon: Schedule },
-    PLANIFIEE: { label: 'Planifiée', color: '#4F46E5', bg: '#EEF2FF', icon: CalendarToday },
-    ANNULEE: { label: 'Annulée', color: '#DC2626', bg: '#FEF2F2', icon: Block },
+    TERMINEE:  { label: 'Terminée',  color: '#10B981', bg: '#ECFDF5', icon: CheckCircle },
+    EN_COURS:  { label: 'En cours',  color: '#F59E0B', bg: '#FFFBEB', icon: Schedule },
+    PLANIFIEE: { label: 'Planifiée', color: '#6366F1', bg: '#EEF2FF', icon: CalendarToday },
+    ANNULEE:   { label: 'Annulée',   color: '#EF4444', bg: '#FEF2F2', icon: Block },
 };
 
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.08 } },
-};
+const DOMAIN_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
 
-const itemVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] } },
-};
+/* ─── Animation variants ─────────────────────────────────────────── */
+const fadeUp = (delay = 0) => ({
+    initial: { opacity: 0, y: 22 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.45, delay, ease: [0.25, 0.46, 0.45, 0.94] },
+});
 
-function StatCard({ title, value, icon, color, bg, trend, sub, onClick, loading }) {
-    const Icon = icon;
+/* ─── Simple Greeting Header ─────────────────────────────────────── */
+function SimpleGreeting({ user }) {
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+    const date = new Date().toLocaleDateString('fr-FR', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+
     return (
-        <motion.div variants={itemVariants}>
-            <Paper
-                onClick={onClick}
-                elevation={0}
-                sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    cursor: onClick ? 'pointer' : 'default',
-                    border: '1px solid #E5E7EB',
-                    bgcolor: '#fff',
-                    transition: 'all 0.2s ease',
-                    '&:hover': onClick ? { borderColor: '#D1D5DB', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.08)' } : {},
-                }}
-            >
-                <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={2}>
-                    <Box sx={{
-                        width: 40, height: 40, borderRadius: 2,
-                        bgcolor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: color,
-                    }}>
-                        <Icon sx={{ fontSize: 20 }} />
-                    </Box>
-                    {trend && (
-                        <Typography variant="caption" sx={{
-                            color: trend.startsWith('+') ? '#059669' : '#DC2626',
-                            fontWeight: 600, fontSize: '0.75rem',
-                            bgcolor: trend.startsWith('+') ? '#ECFDF5' : '#FEF2F2',
-                            px: 1, py: 0.3, borderRadius: 1,
-                        }}>
-                            {trend}
-                        </Typography>
-                    )}
-                </Stack>
-
-                {loading ? (
-                    <>
-                        <Skeleton variant="text" width="50%" height={36} />
-                        <Skeleton variant="text" width="35%" height={18} />
-                    </>
-                ) : (
-                    <>
-                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 0.3, letterSpacing: '-0.01em' }}>
-                            {value}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.8125rem' }}>
-                            {title}
-                        </Typography>
-                    </>
-                )}
-
-                {sub && !loading && (
-                    <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block', mt: 1.2, fontSize: '0.75rem' }}>
-                        {sub}
-                    </Typography>
-                )}
-            </Paper>
+        <motion.div {...fadeUp(0)} style={{ marginBottom: 24 }}>
+            <Box sx={{ mb: 2 }}>
+                <Typography sx={{
+                    fontSize: '0.8rem',
+                    color: '#94A3B8',
+                    fontWeight: 500,
+                    mb: 0.5,
+                    textTransform: 'capitalize',
+                }}>
+                    {date}
+                </Typography>
+                <Typography sx={{
+                    fontSize: '1.6rem',
+                    fontWeight: 800,
+                    color: '#0F172A',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.2,
+                }}>
+                    {greeting}, {user?.login}
+                </Typography>
+            </Box>
+            <Box sx={{ height: 1, bgcolor: '#F1F5F9', width: '100%' }} />
         </motion.div>
     );
 }
 
-function SectionHeader({ title, subtitle, action, actionLabel }) {
-    return (
-        <motion.div variants={itemVariants}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2.5}>
-                <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '0.9375rem', letterSpacing: '-0.01em' }}>
-                        {title}
-                    </Typography>
-                    {subtitle && (
-                        <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: '0.8125rem' }}>
-                            {subtitle}
-                        </Typography>
-                    )}
-                </Box>
-                {action && (
-                    <Button
-                        onClick={action}
-                        endIcon={<ArrowForward sx={{ fontSize: 16 }} />}
-                        sx={{
-                            color: '#4F46E5',
-                            fontWeight: 500,
-                            textTransform: 'none',
-                            fontSize: '0.8125rem',
-                            '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
-                            p: 0,
-                            minWidth: 0,
-                        }}
-                    >
-                        {actionLabel}
-                    </Button>
-                )}
-            </Stack>
-        </motion.div>
-    );
-}
-
+/* ─── Formation row card ─────────────────────────────────────────── */
 function FormationRow({ formation, index, onClick }) {
     const cfg = STATUT_CONFIG[formation.statut] || STATUT_CONFIG.PLANIFIEE;
     const StatusIcon = cfg.icon;
+    const color = DOMAIN_COLORS[index % DOMAIN_COLORS.length];
 
     return (
-        <motion.div variants={itemVariants}>
+        <motion.div {...fadeUp(0.05 + index * 0.06)}>
             <Box
                 onClick={onClick}
                 sx={{
-                    display: 'flex', alignItems: 'center', gap: 2,
-                    py: 2, px: 1,
-                    borderBottom: '1px solid #F3F4F6',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s',
-                    '&:hover': { bgcolor: '#F9FAFB' },
-                    '&:last-child': { borderBottom: 'none' },
+                    display: 'flex', alignItems: 'center', gap: 2, p: 2,
+                    borderRadius: 2.5, cursor: 'pointer', border: '1px solid #F1F5F9',
+                    transition: 'all 0.15s',
+                    '&:hover': { bgcolor: '#FAFBFF', borderColor: '#C7D2FE' },
                 }}
             >
-                <Box sx={{
-                    width: 3, height: 36, borderRadius: 1.5,
-                    bgcolor: cfg.color, flexShrink: 0,
-                }} />
-
+                <Avatar sx={{ width: 38, height: 38, bgcolor: `${color}18`, color, flexShrink: 0 }}>
+                    <School sx={{ fontSize: 18 }} />
+                </Avatar>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" sx={{
-                        fontWeight: 500, color: '#111827', mb: 0.3,
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        fontSize: '0.875rem',
-                    }}>
+                    <Typography sx={{ fontWeight: 600, fontSize: '0.855rem', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {formation.titre}
                     </Typography>
-                    <Stack direction="row" spacing={1.2} alignItems="center">
-                        <Typography variant="caption" sx={{ color: '#6B7280', fontSize: '0.75rem' }}>
-                            {formation.domaineLibelle}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.3, flexWrap: 'wrap' }}>
+                        <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                            {formation.domaineLibelle || '—'}
                         </Typography>
-                        <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: '#D1D5DB' }} />
-                        <Typography variant="caption" sx={{ color: '#6B7280', fontSize: '0.75rem' }}>
-                            {formation.formateurNom}
-                        </Typography>
-                    </Stack>
+                        {formation.formateurNom && (
+                            <>
+                                <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: '#CBD5E1' }} />
+                                <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                                    {formation.formateurNom}
+                                </Typography>
+                            </>
+                        )}
+                    </Box>
                 </Box>
-
-                <Stack direction="row" alignItems="center" spacing={2}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
                     <Chip
-                        icon={<StatusIcon sx={{ fontSize: 13 }} />}
+                        icon={<StatusIcon sx={{ fontSize: '12px !important' }} />}
                         label={cfg.label}
                         size="small"
-                        sx={{
-                            bgcolor: cfg.bg, color: cfg.color,
-                            fontWeight: 500, fontSize: '0.6875rem', height: 24,
-                            '& .MuiChip-icon': { color: cfg.color, ml: '6px' },
-                        }}
+                        sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 600, fontSize: '0.68rem', height: 22 }}
                     />
-                    <Typography variant="caption" sx={{ color: '#9CA3AF', fontWeight: 400, minWidth: 70, textAlign: 'right', fontSize: '0.75rem' }}>
-                        {formation.nbParticipants || 0} inscrits
-                    </Typography>
-                    <ChevronRight sx={{ fontSize: 16, color: '#D1D5DB' }} />
-                </Stack>
+                    {formation.nbParticipants > 0 && (
+                        <Typography sx={{ fontSize: '0.68rem', color: '#94A3B8' }}>
+                            {formation.nbParticipants} participant{formation.nbParticipants > 1 ? 's' : ''}
+                        </Typography>
+                    )}
+                </Box>
             </Box>
         </motion.div>
     );
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   COMPOSANT PRINCIPAL
+══════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
-    const { user, canViewStats, canManageFormations, isResponsable, isAdmin } = useAuthStore();
+    const { user, canManageFormations, isAdmin, isResponsable } = useAuthStore();
     const navigate = useNavigate();
-    const [stats, setStats] = useState(null);
-    const [recentFormations, setRecentFormations] = useState([]);
-    const [loading, setLoading] = useState(true);
+
+    const [formations, setFormations]   = useState([]);
+    const [participants, setParticipants] = useState([]);
+    const [formateurs, setFormateurs]   = useState([]);
+    const [loading, setLoading]         = useState(true);
     const year = new Date().getFullYear();
 
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
         try {
-            const [statsRes, formRes] = await Promise.allSettled([
-                statsService.getDashboard(year),
-                formationService.getAll(year),
+            const results = await Promise.allSettled([
+                canManageFormations() ? formationService.getAll(year) : Promise.resolve(null),
+                canManageFormations() ? participantService.getAll()     : Promise.resolve(null),
+                canManageFormations() ? formateurService.getAll()       : Promise.resolve(null),
             ]);
-            if (statsRes.status === 'fulfilled') setStats(statsRes.value.data);
-            if (formRes.status === 'fulfilled') {
-                const all = formRes.value.data || [];
-                setRecentFormations(all.slice(0, 5));
-            }
-        } catch (err) {
-            console.error('Erreur chargement dashboard:', err);
-        }
-
-        setStats(prev => prev || {
-            totalFormations: 24, totalParticipants: 312, totalFormateurs: 18,
-            budgetTotal: 87450, tauxPresence: 94, satisfactionMoyenne: 4.6,
-            formationsParDomaine: [
-                { name: 'Informatique', value: 8 }, { name: 'Management', value: 6 },
-                { name: 'Finance', value: 5 }, { name: 'Langues', value: 3 }, { name: 'Technique', value: 2 },
-            ],
-            evolutionMensuelle: [
-                { mois: 'Jan', formations: 4, participants: 45 }, { mois: 'Fév', formations: 6, participants: 62 },
-                { mois: 'Mar', formations: 8, participants: 89 }, { mois: 'Avr', formations: 3, participants: 34 },
-                { mois: 'Mai', formations: 5, participants: 56 }, { mois: 'Juin', formations: 7, participants: 78 },
-            ],
-        });
-        setRecentFormations(prev => prev.length ? prev : [
-            { id: 1, titre: "Python pour l'analyse de données", domaineLibelle: 'Informatique', statut: 'TERMINEE', nbParticipants: 24, formateurNom: 'Ahmed Ben Ali' },
-            { id: 2, titre: "Management d'équipe et leadership", domaineLibelle: 'Management', statut: 'TERMINEE', nbParticipants: 18, formateurNom: 'Karim Mrabet' },
-            { id: 3, titre: 'Comptabilité générale avancée', domaineLibelle: 'Finance', statut: 'EN_COURS', nbParticipants: 15, formateurNom: 'Sarra Trabelsi' },
-            { id: 4, titre: 'Cybersécurité et protection des données', domaineLibelle: 'Informatique', statut: 'PLANIFIEE', nbParticipants: 0, formateurNom: 'Ahmed Ben Ali' },
-            { id: 5, titre: 'Anglais professionnel niveau B2', domaineLibelle: 'Langues', statut: 'EN_COURS', nbParticipants: 22, formateurNom: 'Leila Bouaziz' },
-        ]);
+            if (results[0].status === 'fulfilled' && results[0].value)
+                setFormations(results[0].value.data || []);
+            if (results[1].status === 'fulfilled' && results[1].value)
+                setParticipants(results[1].value.data || []);
+            if (results[2].status === 'fulfilled' && results[2].value)
+                setFormateurs(results[2].value.data || []);
+        } catch {}
         setLoading(false);
     };
 
-    return (
-        <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1280, mx: 'auto' }}>
-            <motion.div variants={containerVariants} initial="hidden" animate="visible">
+    /* Derived counts */
+    const recentFormations = [...formations].slice(0, 5);
 
-                {/* ─── Header ─── */}
-                <motion.div variants={itemVariants}>
-                    <Box sx={{ mb: 3.5 }}>
-                        <Typography variant="h5" sx={{
-                            fontWeight: 600, color: '#111827', letterSpacing: '-0.02em', fontSize: '1.25rem', mb: 0.5
-                        }}>
-                            Bonjour, {user?.login || 'Utilisateur'}
+    if (loading) return (
+        <Box sx={{ p: 4 }}>
+            <LinearProgress sx={{ borderRadius: 2, bgcolor: '#EEF2FF', '& .MuiLinearProgress-bar': { bgcolor: '#6366F1' } }} />
+        </Box>
+    );
+
+    /* ── VUE RESPONSABLE ──────────────────────────────────────────── */
+    if (isResponsable() && !isAdmin()) {
+        return (
+            <Box sx={{ p: { xs: 2, md: 3 } }}>
+                <SimpleGreeting user={user} />
+
+                <motion.div {...fadeUp(0.1)}>
+                    <Box sx={{
+                        borderRadius: 3, p: 4, textAlign: 'center',
+                        border: '2px dashed #C7D2FE', bgcolor: '#FAFBFF', mb: 3,
+                    }}>
+                        <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: '#EEF2FF', mx: 'auto', mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Assessment sx={{ color: '#6366F1', fontSize: 32 }} />
+                        </Box>
+                        <Typography sx={{ color: '#64748B', fontSize: '0.875rem', mb: 3, maxWidth: 400, mx: 'auto' }}>
+                            Consultez les statistiques détaillées et les rapports d'activités du centre de formation Excellent Training.
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.8125rem' }}>
-                            Vue d'ensemble des activités de formation
-                        </Typography>
+                        <Button
+                            variant="contained"
+                            startIcon={<TrendingUp />}
+                            onClick={() => navigate('/stats')}
+                            sx={{
+                                borderRadius: 2.5, textTransform: 'none', fontWeight: 700, px: 4, py: 1.2,
+                                background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: 'none',
+                                '&:hover': { background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 4px 16px rgba(99,102,241,0.3)' },
+                            }}
+                        >
+                            Voir les statistiques
+                        </Button>
                     </Box>
                 </motion.div>
+            </Box>
+        );
+    }
 
-                {/* ─── Stat Cards ─── */}
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                    {canManageFormations() && (
-                        <>
-                            <Grid item xs={12} sm={6} lg={3}>
-                                <StatCard
-                                    title="Formations"
-                                    value={stats?.totalFormations || 0}
-                                    icon={School}
-                                    color="#4F46E5"
-                                    bg="#EEF2FF"
-                                    trend="+12%"
-                                    sub="Année précédente"
+    /* ── VUE USER / ADMIN ─────────────────────────────────────────── */
+    return (
+        <Box sx={{ p: { xs: 2, md: 3 } }}>
+            <SimpleGreeting user={user} />
+
+            <Grid container spacing={2.5}>
+                <Grid item xs={12} lg={7}>
+                    <motion.div {...fadeUp(0.1)}>
+                        <Card sx={{ borderRadius: 3, border: '1px solid #E2E8F0', boxShadow: 'none' }}>
+                            <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>
+                                        Formations récentes
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                                        Dernières sessions de l'année {year}
+                                    </Typography>
+                                </Box>
+                                <Button
+                                    size="small"
+                                    endIcon={<ArrowForward sx={{ fontSize: 14 }} />}
                                     onClick={() => navigate('/formations')}
-                                    loading={loading}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6} lg={3}>
-                                <StatCard
-                                    title="Participants"
-                                    value={stats?.totalParticipants || 0}
-                                    icon={People}
-                                    color="#059669"
-                                    bg="#ECFDF5"
-                                    trend="+8%"
-                                    sub="Année précédente"
-                                    onClick={() => navigate('/participants')}
-                                    loading={loading}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6} lg={3}>
-                                <StatCard
-                                    title="Formateurs"
-                                    value={stats?.totalFormateurs || 0}
-                                    icon={Person}
-                                    color="#D97706"
-                                    bg="#FFFBEB"
-                                    sub="Actifs cette année"
-                                    onClick={() => navigate('/formateurs')}
-                                    loading={loading}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6} lg={3}>
-                                <StatCard
-                                    title="Budget"
-                                    value={`${(stats?.budgetTotal || 0).toLocaleString()} TND`}
-                                    icon={TrendingUp}
-                                    color="#7C3AED"
-                                    bg="#F5F3FF"
-                                    trend="+15%"
-                                    sub="Année précédente"
-                                    loading={loading}
-                                />
-                            </Grid>
-                        </>
-                    )}
-
-                    {canViewStats() && !canManageFormations() && (
-                        <>
-                            <Grid item xs={12} sm={6} lg={4}>
-                                <StatCard
-                                    title="Taux de Présence"
-                                    value={`${stats?.tauxPresence || 0}%`}
-                                    icon={Adjust}
-                                    color="#059669"
-                                    bg="#ECFDF5"
-                                    loading={loading}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6} lg={4}>
-                                <StatCard
-                                    title="Satisfaction"
-                                    value={`${stats?.satisfactionMoyenne || 0}/5`}
-                                    icon={EmojiEvents}
-                                    color="#D97706"
-                                    bg="#FFFBEB"
-                                    loading={loading}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6} lg={4}>
-                                <StatCard
-                                    title="Formations"
-                                    value={stats?.totalFormations || 0}
-                                    icon={School}
-                                    color="#4F46E5"
-                                    bg="#EEF2FF"
-                                    loading={loading}
-                                />
-                            </Grid>
-                        </>
-                    )}
-                </Grid>
-
-                {/* ─── Charts Row ─── */}
-                {canViewStats() && stats && (
-                    <Grid container spacing={2} sx={{ mb: 3 }}>
-                        <Grid item xs={12} lg={8}>
-                            <motion.div variants={itemVariants}>
-                                <Paper elevation={0} sx={{
-                                    p: 3, borderRadius: 2, border: '1px solid #E5E7EB', bgcolor: '#fff',
-                                }}>
-                                    <Stack direction="row" alignItems="center" spacing={1.5} mb={3}>
-                                        <ShowChart sx={{ fontSize: 18, color: '#6B7280' }} />
-                                        <Box>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#111827', fontSize: '0.875rem' }}>
-                                                Évolution mensuelle
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: '0.75rem' }}>
-                                                Formations et participants — 6 derniers mois
-                                            </Typography>
-                                        </Box>
-                                    </Stack>
-
-                                    {loading ? (
-                                        <Skeleton variant="rounded" width="100%" height={260} sx={{ borderRadius: 1.5 }} />
-                                    ) : (
-                                        <ResponsiveContainer width="100%" height={260}>
-                                            <AreaChart data={stats.evolutionMensuelle || []} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                                                <defs>
-                                                    <linearGradient id="gradFormations" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.15} />
-                                                        <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
-                                                    </linearGradient>
-                                                    <linearGradient id="gradParticipants" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#059669" stopOpacity={0.15} />
-                                                        <stop offset="95%" stopColor="#059669" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                                                <XAxis dataKey="mois" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} />
-                                                <RechartsTooltip
-                                                    contentStyle={{
-                                                        background: '#fff', border: '1px solid #E5E7EB',
-                                                        borderRadius: 8, color: '#111827', fontSize: 12,
-                                                        boxShadow: '0 4px 20px -4px rgba(0,0,0,0.1)',
-                                                    }}
-                                                />
-                                                <Area type="monotone" dataKey="formations" stroke="#4F46E5" strokeWidth={2} fill="url(#gradFormations)" name="Formations" />
-                                                <Area type="monotone" dataKey="participants" stroke="#059669" strokeWidth={2} fill="url(#gradParticipants)" name="Participants" />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    )}
-                                </Paper>
-                            </motion.div>
-                        </Grid>
-
-                        <Grid item xs={12} lg={4}>
-                            <motion.div variants={itemVariants}>
-                                <Paper elevation={0} sx={{
-                                    p: 3, borderRadius: 2, border: '1px solid #E5E7EB', bgcolor: '#fff',
-                                }}>
-                                    <Stack direction="row" alignItems="center" spacing={1.5} mb={3}>
-                                        <PieChart sx={{ fontSize: 18, color: '#6B7280' }} />
-                                        <Box>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#111827', fontSize: '0.875rem' }}>
-                                                Répartition par domaine
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: '0.75rem' }}>
-                                                Formations par catégorie
-                                            </Typography>
-                                        </Box>
-                                    </Stack>
-
-                                    {loading ? (
-                                        <Skeleton variant="rounded" width="100%" height={200} sx={{ borderRadius: 1.5 }} />
-                                    ) : (
-                                        <>
-                                            <ResponsiveContainer width="100%" height={200}>
-                                                <RePieChart>
-                                                    <Pie
-                                                        data={stats.formationsParDomaine || []}
-                                                        cx="50%" cy="50%"
-                                                        innerRadius={55} outerRadius={85}
-                                                        paddingAngle={3}
-                                                        dataKey="value"
-                                                        stroke="none"
-                                                    >
-                                                        {(stats.formationsParDomaine || []).map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                        ))}
-                                                    </Pie>
-                                                    <RechartsTooltip
-                                                        contentStyle={{
-                                                            background: '#fff', border: '1px solid #E5E7EB',
-                                                            borderRadius: 8, fontSize: 12,
-                                                            boxShadow: '0 4px 20px -4px rgba(0,0,0,0.1)',
-                                                        }}
-                                                        formatter={(value) => [`${value} formations`, '']}
-                                                    />
-                                                </RePieChart>
-                                            </ResponsiveContainer>
-
-                                            <Box sx={{ mt: 1 }}>
-                                                {(stats.formationsParDomaine || []).map((d, i) => (
-                                                    <Box key={d.name} sx={{
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                        py: 0.6,
-                                                    }}>
-                                                        <Stack direction="row" alignItems="center" spacing={1.5}>
-                                                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: COLORS[i % COLORS.length] }} />
-                                                            <Typography variant="body2" sx={{ color: '#4B5563', fontWeight: 400, fontSize: '0.8125rem' }}>
-                                                                {d.name}
-                                                            </Typography>
-                                                        </Stack>
-                                                        <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600, fontSize: '0.8125rem' }}>
-                                                            {d.value}
-                                                        </Typography>
-                                                    </Box>
-                                                ))}
-                                            </Box>
-                                        </>
-                                    )}
-                                </Paper>
-                            </motion.div>
-                        </Grid>
-                    </Grid>
-                )}
-
-                {/* ─── Bottom Row ─── */}
-                <Grid container spacing={2}>
-                    {canManageFormations() && (
-                        <Grid item xs={12} lg={8}>
-                            <motion.div variants={itemVariants}>
-                                <Paper elevation={0} sx={{
-                                    p: 3, borderRadius: 2, border: '1px solid #E5E7EB', bgcolor: '#fff',
-                                }}>
-                                    <SectionHeader
-                                        title="Sessions récentes"
-                                        subtitle="Dernières formations enregistrées"
-                                        action={() => navigate('/formations')}
-                                        actionLabel="Voir tout"
-                                    />
-
-                                    {loading ? (
-                                        <Stack spacing={1}>
-                                            {[1, 2, 3, 4].map(i => (
-                                                <Skeleton key={i} variant="rounded" height={56} sx={{ borderRadius: 1 }} />
-                                            ))}
-                                        </Stack>
-                                    ) : (
-                                        recentFormations.map((f, i) => (
+                                    sx={{ textTransform: 'none', fontSize: '0.78rem', color: '#6366F1', fontWeight: 600 }}
+                                >
+                                    Tout voir
+                                </Button>
+                            </Box>
+                            <Box sx={{ px: 1.5, pb: 1.5 }}>
+                                {recentFormations.length === 0 ? (
+                                    <Box sx={{ textAlign: 'center', py: 4, color: '#94A3B8' }}>
+                                        <School sx={{ fontSize: 36, mb: 1, opacity: 0.4 }} />
+                                        <Typography sx={{ fontSize: '0.85rem' }}>Aucune formation pour {year}</Typography>
+                                        <Button
+                                            size="small"
+                                            startIcon={<Add />}
+                                            onClick={() => navigate('/formations')}
+                                            sx={{ mt: 1.5, textTransform: 'none', color: '#6366F1', fontWeight: 600 }}
+                                        >
+                                            Ajouter une formation
+                                        </Button>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        {recentFormations.map((f, i) => (
                                             <FormationRow
                                                 key={f.id}
                                                 formation={f}
                                                 index={i}
                                                 onClick={() => navigate('/formations')}
                                             />
-                                        ))
-                                    )}
-                                </Paper>
-                            </motion.div>
-                        </Grid>
-                    )}
-
-                    <Grid item xs={12} lg={canManageFormations() ? 4 : 12}>
-                        <motion.div variants={itemVariants}>
-                            <Paper elevation={0} sx={{
-                                p: 3, borderRadius: 2, border: '1px solid #E5E7EB', bgcolor: '#fff', height: '100%',
-                            }}>
-                                <Typography variant="subtitle2" sx={{
-                                    fontWeight: 600, color: '#111827', fontSize: '0.875rem', mb: 3,
-                                }}>
-                                    Indicateurs de performance
-                                </Typography>
-
-                                {loading ? (
-                                    <Stack spacing={2}>
-                                        {[1, 2, 3].map(i => (
-                                            <Skeleton key={i} variant="rounded" height={52} sx={{ borderRadius: 1 }} />
                                         ))}
-                                    </Stack>
-                                ) : (
-                                    <Stack spacing={3}>
-                                        <Box>
-                                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                                                <Typography variant="body2" sx={{ color: '#4B5563', fontWeight: 400, fontSize: '0.8125rem' }}>
-                                                    Taux de présence
-                                                </Typography>
-                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600, fontSize: '0.8125rem' }}>
-                                                    {stats?.tauxPresence || 0}%
-                                                </Typography>
-                                            </Stack>
-                                            <LinearProgress
-                                                variant="determinate"
-                                                value={stats?.tauxPresence || 0}
-                                                sx={{
-                                                    height: 6, borderRadius: 3,
-                                                    bgcolor: '#F3F4F6',
-                                                    '& .MuiLinearProgress-bar': { bgcolor: '#059669', borderRadius: 3 },
-                                                }}
-                                            />
-                                        </Box>
-
-                                        <Box>
-                                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                                                <Typography variant="body2" sx={{ color: '#4B5563', fontWeight: 400, fontSize: '0.8125rem' }}>
-                                                    Satisfaction moyenne
-                                                </Typography>
-                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600, fontSize: '0.8125rem' }}>
-                                                    {stats?.satisfactionMoyenne || 0}/5
-                                                </Typography>
-                                            </Stack>
-                                            <LinearProgress
-                                                variant="determinate"
-                                                value={(stats?.satisfactionMoyenne || 0) * 20}
-                                                sx={{
-                                                    height: 6, borderRadius: 3,
-                                                    bgcolor: '#F3F4F6',
-                                                    '& .MuiLinearProgress-bar': { bgcolor: '#D97706', borderRadius: 3 },
-                                                }}
-                                            />
-                                        </Box>
-
-                                        <Box>
-                                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                                                <Typography variant="body2" sx={{ color: '#4B5563', fontWeight: 400, fontSize: '0.8125rem' }}>
-                                                    Budget utilisé
-                                                </Typography>
-                                                <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600, fontSize: '0.8125rem' }}>
-                                                    78%
-                                                </Typography>
-                                            </Stack>
-                                            <LinearProgress
-                                                variant="determinate"
-                                                value={78}
-                                                sx={{
-                                                    height: 6, borderRadius: 3,
-                                                    bgcolor: '#F3F4F6',
-                                                    '& .MuiLinearProgress-bar': { bgcolor: '#4F46E5', borderRadius: 3 },
-                                                }}
-                                            />
-                                        </Box>
-
-                                        <Divider sx={{ borderColor: '#F3F4F6' }} />
-
-                                        <Box sx={{
-                                            p: 2.5, borderRadius: 2,
-                                            bgcolor: '#F9FAFB', border: '1px solid #F3F4F6',
-                                        }}>
-                                            <Stack direction="row" alignItems="center" spacing={1.5} mb={1}>
-                                                <AutoGraph sx={{ fontSize: 18, color: '#4F46E5' }} />
-                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#111827', fontSize: '0.8125rem' }}>
-                                                    Objectif annuel
-                                                </Typography>
-                                            </Stack>
-                                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#111827', mb: 0.3, fontSize: '1.125rem' }}>
-                                                85% atteint
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: '0.75rem' }}>
-                                                Progression conforme aux prévisions pour {year}
-                                            </Typography>
-                                        </Box>
-                                    </Stack>
+                                    </Box>
                                 )}
-                            </Paper>
-                        </motion.div>
-                    </Grid>
+                            </Box>
+                        </Card>
+                    </motion.div>
                 </Grid>
-            </motion.div>
+
+                <Grid item xs={12} lg={5}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <motion.div {...fadeUp(0.15)}>
+                            <Card sx={{ borderRadius: 3, border: '1px solid #E2E8F0', boxShadow: 'none' }}>
+                                <Box sx={{ px: 2.5, pt: 2.5, pb: 1 }}>
+                                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', mb: 1.5 }}>
+                                        Actions rapides
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        {[
+                                            { label: 'Nouvelle formation',   icon: School,  color: '#6366F1', bg: '#EEF2FF', path: '/formations' },
+                                            { label: 'Nouveau participant',  icon: People,  color: '#10B981', bg: '#ECFDF5', path: '/participants' },
+                                            { label: 'Nouveau formateur',    icon: Person,  color: '#F59E0B', bg: '#FFFBEB', path: '/formateurs' },
+                                            ...(isAdmin() ? [{ label: 'Nouvel utilisateur', icon: AdminPanelSettings, color: '#EF4444', bg: '#FEF2F2', path: '/admin/users' }] : []),
+                                        ].map((action, i) => (
+                                            <Box
+                                                key={i}
+                                                onClick={() => navigate(action.path)}
+                                                sx={{
+                                                    display: 'flex', alignItems: 'center', gap: 1.5, p: 1.4,
+                                                    borderRadius: 2, cursor: 'pointer', border: '1px solid #F1F5F9',
+                                                    transition: 'all 0.15s',
+                                                    '&:hover': { bgcolor: action.bg, borderColor: `${action.color}40` },
+                                                }}
+                                            >
+                                                <Box sx={{ p: 0.8, borderRadius: 1.5, bgcolor: action.bg }}>
+                                                    <action.icon sx={{ color: action.color, fontSize: 17 }} />
+                                                </Box>
+                                                <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: '#0F172A', flex: 1 }}>
+                                                    {action.label}
+                                                </Typography>
+                                                <Add sx={{ fontSize: 16, color: '#CBD5E1' }} />
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Box>
+                                <Box sx={{ height: 12 }} />
+                            </Card>
+                        </motion.div>
+
+                        {formations.length > 0 && (
+                            <motion.div {...fadeUp(0.2)}>
+                                <Card sx={{ borderRadius: 3, border: '1px solid #E2E8F0', boxShadow: 'none' }}>
+                                    <Box sx={{ p: 2.5 }}>
+                                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', mb: 1.8 }}>
+                                            Répartition des formations
+                                        </Typography>
+                                        {Object.entries(STATUT_CONFIG).map(([key, cfg]) => {
+                                            const count = formations.filter(f => f.statut === key).length;
+                                            const pct   = formations.length > 0 ? Math.round(count / formations.length * 100) : 0;
+                                            return (
+                                                <Box key={key} sx={{ mb: 1.8 }}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.6 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                                                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: cfg.color }} />
+                                                            <Typography sx={{ fontSize: '0.78rem', color: '#475569', fontWeight: 500 }}>{cfg.label}</Typography>
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>{count}</Typography>
+                                                            <Typography sx={{ fontSize: '0.7rem', color: '#94A3B8' }}>({pct}%)</Typography>
+                                                        </Box>
+                                                    </Box>
+                                                    <Box sx={{ height: 6, bgcolor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' }}>
+                                                        <motion.div
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${pct}%` }}
+                                                            transition={{ duration: 0.8, delay: 0.6, ease: 'easeOut' }}
+                                                            style={{ height: '100%', borderRadius: 3, background: cfg.color }}
+                                                        />
+                                                    </Box>
+                                                </Box>
+                                            );
+                                        })}
+                                    </Box>
+                                </Card>
+                            </motion.div>
+                        )}
+
+                        {isAdmin() && (
+                            <motion.div {...fadeUp(0.25)}>
+                                <Card
+                                    onClick={() => navigate('/stats')}
+                                    sx={{
+                                        borderRadius: 3, border: '1px solid #E2E8F0', boxShadow: 'none',
+                                        cursor: 'pointer', overflow: 'hidden',
+                                        '&:hover': { borderColor: '#C7D2FE', boxShadow: '0 4px 16px rgba(99,102,241,0.1)' },
+                                        transition: 'all 0.2s',
+                                    }}
+                                >
+                                    <Box sx={{ height: 3, background: 'linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899)' }} />
+                                    <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Box sx={{ p: 1.2, borderRadius: 2, bgcolor: '#EEF2FF' }}>
+                                            <Assessment sx={{ color: '#6366F1', fontSize: 22 }} />
+                                        </Box>
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: '#0F172A' }}>
+                                                Statistiques & Analyses
+                                            </Typography>
+                                            <Typography sx={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                                                Rapports détaillés · 2022–2026
+                                            </Typography>
+                                        </Box>
+                                        <ArrowForward sx={{ fontSize: 18, color: '#6366F1' }} />
+                                    </Box>
+                                </Card>
+                            </motion.div>
+                        )}
+                    </Box>
+                </Grid>
+            </Grid>
         </Box>
     );
 }

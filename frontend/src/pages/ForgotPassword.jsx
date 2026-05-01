@@ -171,7 +171,7 @@ export function ForgotPassword() {
                               <CircularProgress size={16} sx={{ color: '#fff' }} />
                               Envoi en cours...
                             </Box>
-                        ) : 'Envoyer le lien →'}
+                        ) : 'Envoyer le lien'}
                       </Button>
                     </form>
                   </motion.div>
@@ -334,7 +334,7 @@ export function ResetPassword() {
                   fullWidth
                   sx={{ py: 1.2, borderRadius: 2.5, textTransform: 'none', fontWeight: 600, color: '#94A3B8' }}
               >
-                ← Retour à la connexion
+                Retour à la connexion
               </Button>
             </Paper>
           </motion.div>
@@ -374,7 +374,7 @@ export function ResetPassword() {
                     <SuccessBox
                         message="Mot de passe réinitialisé avec succès ! Vous pouvez maintenant vous connecter."
                         onBack={() => navigate('/login')}
-                        backLabel="Se connecter →"
+                        backLabel="Se connecter"
                     />
                   </motion.div>
               ) : (
@@ -490,7 +490,7 @@ export function ResetPassword() {
                               <CircularProgress size={16} sx={{ color: '#fff' }} />
                               Traitement...
                             </Box>
-                        ) : 'Réinitialiser →'}
+                        ) : 'Réinitialiser'}
                       </Button>
                     </form>
                   </motion.div>
@@ -559,7 +559,7 @@ function BackButton({ onClick }) {
             '&:hover': { color: '#6366F1', bgcolor: '#F8FAFC' },
           }}
       >
-        ← Retour à la connexion
+        Retour à la connexion
       </Button>
   );
 }
