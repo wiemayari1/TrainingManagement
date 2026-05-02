@@ -41,6 +41,14 @@ L'application élimine la gestion manuelle (fichiers Excel, courriers papiers) e
 
 ---
 
+## Comptes par défaut
+
+Si vous avez exécuté le script de données de démonstration (`db/data.sql`), les 3 comptes suivants sont créés automatiquement avec le mot de passe **`password123`** :
+- **Administrateur** : identifiant `admin` / mot de passe `password123`
+- **Responsable** : identifiant `responsable` / mot de passe `password123`
+- **Utilisateur** : identifiant `user` / mot de passe `password123`
+
+---
 ## Guide d'Installation
 
 Voici les étapes détaillées pour exécuter le projet localement sous Windows et Ubuntu/Linux.
