@@ -19,7 +19,7 @@ L'application élimine la gestion manuelle (fichiers Excel, courriers papiers) e
   - Envoi automatique des informations de connexion (identifiant / mot de passe) aux nouveaux utilisateurs.
   - Gestion sécurisée de la réinitialisation des accès via la fonctionnalité "Mot de passe oublié".
   - Notification instantanée des participants lorsqu'ils sont affectés à une nouvelle formation.
-  - Envoi de rappels automatiques aux participants le jour même du début de leur formation (avec intégration dynamique du logo de l'entreprise).
+  - Envoi de rappels automatiques aux participants le jour même du début de leur formation.
 - **Sécurité Renforcée (RBAC & JWT)** : Système de connexion robuste sans état basé sur les rôles (ADMIN, RESPONSABLE, USER) avec chiffrement des mots de passe (BCrypt).
 
 ---
