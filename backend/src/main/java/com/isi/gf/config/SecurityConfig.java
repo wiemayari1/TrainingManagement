@@ -1,6 +1,6 @@
 package com.isi.gf.config;
 
-import com.isi.gf.security.JwtAuthFilter;
+import com.isi.gf.config.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
