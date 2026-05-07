@@ -22,7 +22,8 @@ public interface PartRepo extends JpaRepository<Participant, Long> {
     @Query("SELECT COUNT(p) FROM Participant p")
     Long countTotal();
 
-    @Query("SELECT COUNT(DISTINCT i.participant.id) FROM Inscription i WHERE i.formation.annee = :annee")
+    @Query("SELECT COUNT(DISTINCT i.participant.id) FROM Inscription i " +
+            "WHERE i.formation.annee = :annee AND i.formation.statut <> 'ANNULEE'")
     Long countParticipantsByYear(@Param("annee") Integer annee);
 
     /** Participants par structure pour une année donnée */
@@ -30,7 +31,7 @@ public interface PartRepo extends JpaRepository<Participant, Long> {
             "FROM Inscription i " +
             "JOIN i.participant p " +
             "JOIN p.structure s " +
-            "WHERE i.formation.annee = :annee " +
+            "WHERE i.formation.annee = :annee AND i.formation.statut <> 'ANNULEE' " +
             "GROUP BY s.id, s.libelle " +
             "ORDER BY COUNT(DISTINCT i.participant.id) DESC")
     List<Object[]> countParticipantsByStructureAndYear(@Param("annee") Integer annee);

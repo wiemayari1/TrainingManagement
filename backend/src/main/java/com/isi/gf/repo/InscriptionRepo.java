@@ -25,10 +25,12 @@ public interface InscriptionRepo extends JpaRepository<Inscription, Long> {
     @Query("SELECT COUNT(i) FROM Inscription i WHERE i.formation.id = :formationId")
     Long countByFormation(@Param("formationId") Long formationId);
 
-    @Query("SELECT COUNT(i) FROM Inscription i WHERE i.statut = 'PRESENT' AND i.formation.annee = :annee")
+    @Query("SELECT COUNT(i) FROM Inscription i WHERE i.statut = 'PRESENT' " +
+            "AND i.formation.annee = :annee AND i.formation.statut <> 'ANNULEE'")
     Long countTotalPresents(@Param("annee") Integer annee);
 
-    @Query("SELECT COUNT(i) FROM Inscription i WHERE i.formation.annee = :annee")
+    @Query("SELECT COUNT(i) FROM Inscription i WHERE i.formation.annee = :annee " +
+            "AND i.formation.statut <> 'ANNULEE'")
     Long countTotalInscriptions(@Param("annee") Integer annee);
 
     @Query("SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END FROM Inscription i " +
@@ -40,7 +42,8 @@ public interface InscriptionRepo extends JpaRepository<Inscription, Long> {
 
     /** Note moyenne globale sur toutes les inscriptions d'une année */
     @Query("SELECT AVG(i.note) FROM Inscription i " +
-            "WHERE i.formation.annee = :annee AND i.note IS NOT NULL")
+            "WHERE i.formation.annee = :annee AND i.formation.statut <> 'ANNULEE' " +
+            "AND i.note IS NOT NULL")
     Double getAverageNoteGlobal(@Param("annee") Integer annee);
 
     /** Notes moyennes par domaine pour une année donnée */
@@ -48,7 +51,7 @@ public interface InscriptionRepo extends JpaRepository<Inscription, Long> {
             "FROM Inscription i " +
             "JOIN i.formation f " +
             "JOIN f.domaine d " +
-            "WHERE f.annee = :annee AND i.note IS NOT NULL " +
+            "WHERE f.annee = :annee AND f.statut <> 'ANNULEE' AND i.note IS NOT NULL " +
             "GROUP BY d.id, d.libelle " +
             "ORDER BY AVG(i.note) DESC")
     List<Object[]> getAverageNoteByDomaineAndAnnee(@Param("annee") Integer annee);
@@ -57,7 +60,7 @@ public interface InscriptionRepo extends JpaRepository<Inscription, Long> {
     @Query("SELECT FUNCTION('MONTH', f.dateDebut), COUNT(DISTINCT i.participant.id) " +
             "FROM Inscription i " +
             "JOIN i.formation f " +
-            "WHERE f.annee = :annee AND f.dateDebut IS NOT NULL " +
+            "WHERE f.annee = :annee AND f.statut <> 'ANNULEE' AND f.dateDebut IS NOT NULL " +
             "GROUP BY FUNCTION('MONTH', f.dateDebut) " +
             "ORDER BY FUNCTION('MONTH', f.dateDebut)")
     List<Object[]> countParticipantsByMonth(@Param("annee") Integer annee);

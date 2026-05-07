@@ -34,7 +34,7 @@ public interface FormateurRepo extends JpaRepository<Formateur, Long> {
             "FROM Formateur f " +
             "JOIN f.formations fo " +
             "LEFT JOIN fo.inscriptions i " +
-            "WHERE fo.annee = :annee " +
+            "WHERE fo.annee = :annee AND fo.statut <> 'ANNULEE' " +
             "GROUP BY f.id, f.nom, f.prenom, f.type " +
             "ORDER BY AVG(i.note) DESC NULLS LAST")
     List<Object[]> findTopFormateursWithStats(@Param("annee") Integer annee);

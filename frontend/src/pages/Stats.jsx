@@ -6,7 +6,7 @@ import {
     Tabs, Tab, ToggleButton, ToggleButtonGroup, Skeleton,
 } from '@mui/material';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, AreaChart, Area, Line,
     RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
     Legend,
@@ -144,7 +144,7 @@ const CustomBarLineChart = ({
     return (
         <Box sx={{ width: '100%', height }}>
             <ResponsiveContainer width="100%" height={height}>
-                <BarChart
+                <ComposedChart
                     key={chartId}
                     data={data}
                     barCategoryGap="30%"
@@ -259,7 +259,7 @@ const CustomBarLineChart = ({
                         animationBegin={200}
                         connectNulls={true}
                     />
-                </BarChart>
+                </ComposedChart>
             </ResponsiveContainer>
         </Box>
     );
