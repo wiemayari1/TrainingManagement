@@ -1,4 +1,4 @@
-package com.isi.gf.security;
+package com.isi.gf.config;
 
 import com.isi.gf.config.JwtUtils;
 import jakarta.servlet.FilterChain;
