@@ -1,136 +1,136 @@
-# Application de Gestion de Formation 
+# Training Management Application
 
-**Année Universitaire :** 2025/2026  
-**Institut :** Institut Supérieur d'Informatique (Université de Tunis El Manar)  
-**Auteurs :** Wiem Ayari & Sakroufi Aya
+**Academic Year:** 2025/2026  
+**Institute:** Institut Supérieur d'Informatique (Université de Tunis El Manar)  
+**Authors:** Wiem Ayari & Sakroufi Aya
 
-Une plateforme web moderne, sécurisée et hautement performante conçue pour numériser et optimiser la gestion centralisée des formations professionnelles continues au sein du centre de formation « Excellent Training » de la société « Green Building ». 
+A modern, secure, and highly performant web platform designed to digitize and optimize the centralized management of continuing professional training programs within the "Excellent Training" training center of the "Green Building" company.
 
-L'application élimine la gestion manuelle (fichiers Excel, courriers papiers) en automatisant le suivi des formations, l'affectation des participants et des formateurs, tout en offrant aux responsables une vue analytique pointue sur l'activité annuelle de l'entreprise.
-
----
-
-## Fonctionnalités Principales
-
-- **Tableau de Bord Analytique Dynamique** : Visualisation en temps réel des statistiques clés (KPIs, suivi des budgets, répartition des formations par domaine et par structure) grâce à des graphiques interactifs.
-- **Gestion Avancée des Formations** : Création, planification et gestion complète du cycle de vie des sessions de formation.
-- **Gestion Complète des Acteurs** : Suivi précis des formateurs (internes et externes) et gestion du parcours de chaque participant.
-- **Système de Notifications Intelligentes par E-mail** : 
-  - Envoi automatique des informations de connexion (identifiant / mot de passe) aux nouveaux utilisateurs.
-  - Gestion sécurisée de la réinitialisation des accès via la fonctionnalité "Mot de passe oublié".
-  - Notification instantanée des participants lorsqu'ils sont affectés à une nouvelle formation.
-  - Envoi de rappels automatiques aux participants le jour même du début de leur formation (avec intégration dynamique du logo de l'entreprise).
-- **Sécurité Renforcée (RBAC & JWT)** : Système de connexion robuste sans état basé sur les rôles (ADMIN, RESPONSABLE, USER) avec chiffrement des mots de passe (BCrypt).
+The application eliminates manual management (Excel files, paper mail) by automating training tracking, the assignment of participants and trainers, while offering managers a sharp analytical view of the company's annual activity.
 
 ---
 
-## Technologies Utilisées
+## Main Features
 
-### Backend (API REST)
-- **Java & Spring Boot 3** : Framework robuste offrant d'excellentes performances.
-- **Spring Security & JWT** : Sécurisation complète des accès et des endpoints.
-- **Spring Data JPA & Hibernate** : Mapping objet-relationnel (ORM) strict pour garantir l'intégrité des données.
-- **MySQL** : Base de données relationnelle.
-- **Spring Mail** : Intégration SMTP pour le système de notifications par messagerie.
-
-### Frontend (Interface Utilisateur)
-- **React.js** : Construction d'une Single Page Application (SPA) réactive.
-- **Material UI (MUI)** : Design system professionnel, ergonomique et accessible.
-- **Framer Motion** : Micro-animations fluides pour une expérience utilisateur très soignée.
-- **Recharts** : Création des tableaux de bord analytiques dynamiques.
+- **Dynamic Analytical Dashboard**: Real-time visualization of key statistics (KPIs, budget tracking, breakdown of training programs by domain and structure) through interactive charts.
+- **Advanced Training Management**: Creation, scheduling, and complete management of the training session lifecycle.
+- **Comprehensive Actor Management**: Precise tracking of trainers (internal and external) and management of each participant's journey.
+- **Smart Email Notification System**:
+  - Automatic sending of login information (username / password) to new users.
+  - Secure management of access reset via the "Forgot Password" feature.
+  - Instant notification of participants when they are assigned to a new training program.
+  - Automatic reminders sent to participants on the day their training begins (with dynamic integration of the company logo).
+- **Enhanced Security (RBAC & JWT)**: Robust, stateless, role-based login system (ADMIN, RESPONSABLE, USER) with password encryption (BCrypt).
 
 ---
 
-## Comptes par défaut
+## Technologies Used
 
-Si vous avez exécuté le script de données de démonstration (`db/data.sql`), les 3 comptes suivants sont créés automatiquement avec le mot de passe **`password123`** :
-- **Administrateur** : identifiant `admin` / mot de passe `password123`
-- **Responsable** : identifiant `responsable` / mot de passe `password123`
-- **Utilisateur** : identifiant `user` / mot de passe `password123`
+### Backend (REST API)
+- **Java & Spring Boot 3**: Robust framework offering excellent performance.
+- **Spring Security & JWT**: Complete security of access and endpoints.
+- **Spring Data JPA & Hibernate**: Strict object-relational mapping (ORM) to guarantee data integrity.
+- **MySQL**: Relational database.
+- **Spring Mail**: SMTP integration for the email notification system.
+
+### Frontend (User Interface)
+- **React.js**: Building a reactive Single Page Application (SPA).
+- **Material UI (MUI)**: Professional, ergonomic, and accessible design system.
+- **Framer Motion**: Smooth micro-animations for a highly polished user experience.
+- **Recharts**: Creation of dynamic analytical dashboards.
 
 ---
 
-## Guide d'Installation
+## Default Accounts
 
-Voici les étapes détaillées pour exécuter le projet localement sous Windows et Ubuntu/Linux.
+If you have run the demo data script (`db/data.sql`), the following 3 accounts are automatically created with the password **`password123`**:
+- **Administrator**: username `admin` / password `password123`
+- **Manager**: username `responsable` / password `password123`
+- **User**: username `user` / password `password123`
 
-### 1. Prérequis (Communs)
-Assurez-vous d'avoir installé les outils suivants sur votre machine :
-- Node.js (version 18 ou supérieure)
-- Java JDK (version 17 ou supérieure)
-- MySQL Server (version 8.0 ou supérieure)
+---
+
+## Installation Guide
+
+Here are the detailed steps to run the project locally on Windows and Ubuntu/Linux.
+
+### 1. Prerequisites (Common)
+Make sure you have the following tools installed on your machine:
+- Node.js (version 18 or higher)
+- Java JDK (version 17 or higher)
+- MySQL Server (version 8.0 or higher)
 - Maven (3.8+)
-- Un IDE pour Java (IntelliJ IDEA, Eclipse ou VS Code)
+- A Java IDE (IntelliJ IDEA, Eclipse, or VS Code)
 
-### 2. Configuration du JWT Secret
-Pour la variable d'environnement JWT_SECRET (que nous configurerons plus bas dans le fichier .env), vous devez utiliser une longue chaîne de caractères aléatoire et sécurisée (au moins 256 bits).
-Vous pouvez utiliser des générateurs en ligne (comme un générateur SHA-256), ou bien saisir vous-même une longue phrase robuste, par exemple :
+### 2. JWT Secret Configuration
+For the JWT_SECRET environment variable (which we will configure below in the .env file), you must use a long, secure random string (at least 256 bits).
+You can use online generators (such as a SHA-256 generator), or enter a long robust phrase yourself, for example:
 `JWT_SECRET=MaCleSuperSecreteEtTresLonguePourLeProjetDeFormation2026!`
 
-### 3. Déploiement sur Windows
+### 3. Deployment on Windows
 
-**Base de données :**
-1. Ouvrez votre client MySQL (ex: MySQL Workbench ou phpMyAdmin via WAMP/XAMPP).
-2. Ouvrez le fichier `db/schema.sql` situé dans le code source et exécutez tout son contenu. Cela créera la base `training_db` et l'ensemble des tables nécessaires.
-3. *(Optionnel)* Ouvrez et exécutez le fichier `db/data.sql` pour remplir la base avec un jeu de données de démonstration.
+**Database:**
+1. Open your MySQL client (e.g., MySQL Workbench or phpMyAdmin via WAMP/XAMPP).
+2. Open the `db/schema.sql` file located in the source code and execute its entire content. This will create the `training_db` database and all the necessary tables.
+3. *(Optional)* Open and execute the `db/data.sql` file to populate the database with a set of demo data.
 
-**Backend (Spring Boot) :**
-1. Ouvrez le dossier `backend` dans votre IDE.
-2. À la racine du dossier `backend/`, vous trouverez un fichier nommé `.env.example`. Renommez-le ou copiez-le en `.env` (sans nom avant le point) et mettez à jour vos variables d'environnement :
+**Backend (Spring Boot):**
+1. Open the `backend` folder in your IDE.
+2. At the root of the `backend/` folder, you will find a file named `.env.example`. Rename it or copy it to `.env` (no name before the dot) and update your environment variables:
    ```env
    DATASOURCE_URL=jdbc:mysql://localhost:3306/training_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
    MYSQL_USER=root
-   MYSQL_PASSWORD=votre_mot_de_passe_mysql
-   JWT_SECRET=VotreCleSecreteJWTGenereeEtape2
-   MAIL_USERNAME=votre_email@gmail.com
-   # Important : Utilisez un "Mot de passe d'application" (16 caractères) généré depuis la sécurité de votre compte Google, et non votre vrai mot de passe.
-   MAIL_PASSWORD=votre_mot_de_passe_d_application_gmail
+   MYSQL_PASSWORD=your_mysql_password
+   JWT_SECRET=YourJWTSecretKeyGeneratedInStep2
+   MAIL_USERNAME=your_email@gmail.com
+   # Important: Use an "Application password" (16 characters) generated from your Google account security settings, not your real password.
+   MAIL_PASSWORD=your_gmail_application_password
    ```
-3. Lancez l'application en exécutant la classe principale (`GfApplication.java`). Le serveur démarrera sur le port 8081.
+3. Run the application by executing the main class (`GfApplication.java`). The server will start on port 8081.
 
-**Frontend (React) :**
-1. Ouvrez PowerShell et naviguez dans le dossier `frontend` :
+**Frontend (React):**
+1. Open PowerShell and navigate to the `frontend` folder:
    ```bash
-   cd chemin\vers\TrainingManagement\frontend
+   cd path\to\TrainingManagement\frontend
    ```
-2. Installez les dépendances et lancez l'application :
+2. Install the dependencies and run the application:
    ```bash
    npm install
    npm start
    ```
 
-### 4. Déploiement sur Ubuntu / Linux
+### 4. Deployment on Ubuntu / Linux
 
-**Base de données :**
-1. Ouvrez un terminal et exécutez les scripts SQL :
+**Database:**
+1. Open a terminal and run the SQL scripts:
    ```bash
    mysql -u root -p < db/schema.sql
    mysql -u root -p < db/data.sql
    ```
 
-**Backend (Spring Boot) :**
-1. Naviguez dans le dossier backend :
+**Backend (Spring Boot):**
+1. Navigate to the backend folder:
    ```bash
    cd backend
    ```
-2. Copiez le fichier `.env.example` vers `.env` et ajustez les variables avec les mêmes informations que pour Windows :
+2. Copy the `.env.example` file to `.env` and adjust the variables with the same information as for Windows:
    ```bash
    cp .env.example .env
    nano .env
-   # Ajoutez vos variables et sauvegardez (Ctrl+O, Enter, Ctrl+X)
+   # Add your variables and save (Ctrl+O, Enter, Ctrl+X)
    ```
-3. Exportez les variables d'environnement et démarrez le serveur avec Maven :
+3. Export the environment variables and start the server with Maven:
    ```bash
    export $(cat .env | grep -v '^#' | xargs)
    mvn spring-boot:run
    ```
 
-**Frontend (React) :**
-1. Naviguez dans le dossier frontend :
+**Frontend (React):**
+1. Navigate to the frontend folder:
    ```bash
    cd frontend
    ```
-2. Installez les dépendances et lancez le frontend :
+2. Install the dependencies and run the frontend:
    ```bash
    npm install
    npm start
@@ -138,33 +138,31 @@ Vous pouvez utiliser des générateurs en ligne (comme un générateur SHA-256),
 
 ---
 
-## Architecture de Sécurité Avancée et Validations
+## Advanced Security Architecture and Validations
 
-La sécurité est une composante majeure de l'application, conçue pour protéger les données sensibles et répondre aux normes industrielles :
-- **Authentification sans état (JWT)** : L'application utilise les JSON Web Tokens (JWT) pour une sécurisation optimale des échanges entre le frontend React et l'API Spring Boot.
-- **Hachage cryptographique (BCrypt)** : Tous les mots de passe sont hachés de manière irréversible avec l'algorithme BCrypt avant leur stockage en base de données.
-- **Contrôle d'Accès Basé sur les Rôles (RBAC)** : Les routes et méthodes de l'API sont strictement verrouillées (via `@PreAuthorize`) selon trois niveaux de privilèges :
-  - **Administrateur** : Accès total au système et gestion des comptes utilisateurs.
-  - **Responsable** : Accès aux statistiques et au tableau de bord analytique.
-  - **Utilisateur** : Accès au suivi fonctionnel (Formations, Participants, Formateurs).
-- **Validations strictes (@Valid)** : Toutes les données saisies par les utilisateurs sont systématiquement validées par le backend (Jakarta Validation) pour garantir l'intégrité et la fiabilité des informations en base, conformément aux exigences du cahier des charges.
-
----
-
-## Défis Techniques Relevés
-
-1. **Intégration du système d'E-mailing complet** : Développer un mécanisme robuste pour notifier les acteurs de manière proactive avec des modèles de courriels professionnels intégrant des images incrustées.
-2. **Analytique en Temps Réel** : Remplacer l'ancien système manuel (Excel) par des graphiques interactifs qui lisent dynamiquement les données relationnelles complexes de la base.
-3. **Sécurité et CORS** : Gestion approfondie des filtres JWT pour bloquer correctement les accès non autorisés (401/403) sans rompre la communication entre le front-end React et l'API Spring Boot.
+Security is a major component of the application, designed to protect sensitive data and meet industry standards:
+- **Stateless Authentication (JWT)**: The application uses JSON Web Tokens (JWT) for optimal security of exchanges between the React frontend and the Spring Boot API.
+- **Cryptographic Hashing (BCrypt)**: All passwords are irreversibly hashed using the BCrypt algorithm before being stored in the database.
+- **Role-Based Access Control (RBAC)**: API routes and methods are strictly locked down (via `@PreAuthorize`) according to three privilege levels:
+  - **Administrator**: Full access to the system and management of user accounts.
+  - **Manager**: Access to statistics and the analytical dashboard.
+  - **User**: Access to functional tracking (Training programs, Participants, Trainers).
+- **Strict Validations (@Valid)**: All data entered by users is systematically validated by the backend (Jakarta Validation) to guarantee the integrity and reliability of information in the database, in accordance with the requirements of the specifications.
 
 ---
 
-## Perspectives d'Évolution
+## Technical Challenges Addressed
 
-Afin d'améliorer encore l'application dans le futur, voici quelques perspectives d'évolution envisageables :
-- **Espace Participant Indépendant** : Faire évoluer la plateforme vers une application complète de centre de formations en intégrant des comptes personnels et dédiés pour les participants et formateurs.
-- **Génération d'Attestations** : Création automatique d'attestations de présence et de réussite au format PDF pour les participants à la fin d'une formation.
-- **Déploiement Cloud / Docker** : Conteneuriser l'application avec Docker pour simplifier et automatiser son déploiement sur des serveurs cloud.
-- **Intégration d'un Calendrier Interactif** : Ajouter une vue calendrier (type FullCalendar) pour offrir une visualisation temporelle globale de toutes les sessions de formation planifiées.
-- **Sécurité HTTPS & Certificat SSL** : Mettre en place un certificat SSL/TLS pour forcer le trafic en HTTPS et garantir un chiffrement de bout en bout des communications en production.
+1. **Integration of the complete Emailing system**: Developing a robust mechanism to proactively notify actors with professional email templates incorporating embedded images.
+2. **Real-Time Analytics**: Replacing the old manual system (Excel) with interactive charts that dynamically read complex relational data from the database.
+3. **Security and CORS**: In-depth management of JWT filters to correctly block unauthorized access (401/403) without breaking communication between the React front-end and the Spring Boot API.
 
+---
+
+## Future Prospects
+
+To further improve the application in the future, here are some possible development prospects:
+- **Independent Participant Space**: Evolving the platform into a complete training center application by integrating personal, dedicated accounts for participants and trainers.
+- **Certificate Generation**: Automatic creation of attendance and completion certificates in PDF format for participants at the end of a training program.
+- **Interactive Calendar Integration**: Adding a calendar view (such as FullCalendar) to provide a comprehensive time-based visualization of all scheduled training sessions.
+- **HTTPS Security & SSL Certificate**: Setting up an SSL/TLS certificate to enforce HTTPS traffic and guarantee end-to-end encryption of communications in production.
