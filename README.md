@@ -1,9 +1,5 @@
 # Training Management System
 
-A secure web platform for managing professional training activities, developed as part of an engineering project at the **Higher Institute of Computer Science (ISI)**.
-
----
-
 ## Overview
 
 Training Management System is a modern web application designed to digitalize and simplify the management of professional training within **Excellent Training - Green Building**.
