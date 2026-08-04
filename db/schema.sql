@@ -2,9 +2,9 @@
 -- Base de donnees : Gestion de Formation
 -- ============================================
 
-DROP DATABASE IF EXISTS training_db;
-CREATE DATABASE training_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE training_db;
+DROP DATABASE IF EXISTS trainingmanagement;
+CREATE DATABASE trainingmanagement CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE trainingmanagement;
 
 -- =====================================================
 -- TABLE : role

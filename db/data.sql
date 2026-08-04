@@ -1,4 +1,4 @@
-USE training_db;
+USE trainingmanagement;
 
 -- =====================================================
 -- TABLE : role
